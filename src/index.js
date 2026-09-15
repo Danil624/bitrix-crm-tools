@@ -469,7 +469,131 @@ async function addLeadTimelineComment(
     }
   );
 }
+const NO_PHONE_REASON_FIELD_TITLE =
+  'Почему не взяли контакт клиента?';
 
+
+async function findLeadUserFieldByTitle(
+  domain,
+  accessToken,
+  title
+) {
+
+  let start = 0;
+
+
+  for (
+    let page = 0;
+    page < 20;
+    page++
+  ) {
+
+    const response =
+      await restCall(
+        domain,
+        accessToken,
+        'crm.lead.userfield.list',
+        {
+          order: {
+            ID: 'ASC'
+          },
+
+          start:
+            start
+        }
+      );
+
+
+    if (
+      response.error
+    ) {
+
+      return null;
+    }
+
+
+    const fields =
+      Array.isArray(
+        response.result
+      )
+        ?
+        response.result
+        :
+        [];
+
+
+    for (
+      const field
+      of fields
+    ) {
+
+      const labels = [
+
+        field.EDIT_FORM_LABEL,
+        field.LIST_COLUMN_LABEL,
+        field.LIST_FILTER_LABEL,
+        field.LABEL,
+        field.TITLE
+
+      ];
+
+
+      for (
+        let label
+        of labels
+      ) {
+
+        if (
+          label
+          &&
+          typeof label
+          === 'object'
+        ) {
+
+          label =
+            label.ru
+            ||
+            '';
+        }
+
+
+        if (
+          normalizeText(
+            label
+          )
+          ===
+          normalizeText(
+            title
+          )
+        ) {
+
+          return field;
+        }
+      }
+    }
+
+
+    if (
+      response.next === undefined
+      ||
+      response.next === null
+      ||
+      response.next === false
+    ) {
+
+      break;
+    }
+
+
+    start =
+      Number(
+        response.next || 0
+      );
+  }
+
+
+  return null;
+}
 async function leadPhoneGuard(request) {
   let form;
 
@@ -625,7 +749,91 @@ async function leadPhoneGuard(request) {
       statusId: currentStatusId,
     });
   }
+/*
+ * Контакт вообще не выбран —
+ * причину отсутствия телефона использовать нельзя.
+ * Лид должен вернуться в "Новый".
+ */
 
+if (!contactId) {
+
+  reason =
+    'В поле «Клиент» не выбран контакт. ' +
+    'Сначала добавьте клиента.';
+
+} else {
+
+  /*
+   * Контакт есть, но телефона нет.
+   * Проверяем причину.
+   */
+
+  const reasonField =
+    await findLeadUserFieldByTitle(
+      domain,
+      accessToken,
+      NO_PHONE_REASON_FIELD_TITLE
+    );
+
+
+  if (!reasonField) {
+
+    reason =
+      'Не найдено поле «Почему не взяли контакт клиента?».';
+
+  } else {
+
+    const reasonFieldCode =
+      String(
+        reasonField.FIELD_NAME || ''
+      ).trim();
+
+
+    const noPhoneReason =
+      lead[
+        reasonFieldCode
+      ];
+
+
+    const hasNoPhoneReason =
+
+      Array.isArray(
+        noPhoneReason
+      )
+        ?
+        noPhoneReason.length > 0
+
+        :
+
+        String(
+          noPhoneReason || ''
+        ).trim() !== '';
+
+
+    /*
+     * Причина заполнена —
+     * разрешаем работать без телефона.
+     */
+
+    if (hasNoPhoneReason) {
+
+      return json({
+        ok: true,
+        allowed: true,
+        phoneMissing: true,
+        reasonProvided: true,
+        leadId,
+        contactId,
+        statusId:
+          currentStatusId
+      });
+    }
+
+
+    reason =
+      'У клиента не заполнен телефон и не указана причина отсутствия контакта.';
+  }
+}
   /*
    * Телефона нет — возвращаем лид в "Новый".
    * Повторное ONCRMLEADUPDATE не зациклится:
@@ -656,7 +864,10 @@ async function leadPhoneGuard(request) {
     domain,
     accessToken,
     leadId,
-    '⚠️ Лид возвращён в стадию «Новый». ' + reason
+    '⚠️ Лид возвращён в стадию «Новый». ' +
+  reason +
+  ' Заполните телефон либо поле ' +
+  '«Почему не взяли контакт клиента?».'
   );
 
   return json({
