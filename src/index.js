@@ -428,9 +428,26 @@ function contactHasPhone(contact) {
     ? contact.PHONE
     : [];
 
-  return phones.some(
-    item => String(item?.VALUE || '').trim() !== ''
-  );
+  /*
+   * Bitrix иногда отдаёт в PHONE только маску/код страны,
+   * например "+7".
+   *
+   * Такое значение не считаем полноценным телефоном.
+   * Требуем минимум 10 цифр.
+   */
+
+  return phones.some(function (item) {
+    const raw = String(
+      item?.VALUE || ''
+    ).trim();
+
+    const digits = raw.replace(
+      /\D/g,
+      ''
+    );
+
+    return digits.length >= 10;
+  });
 }
 
 async function addLeadTimelineComment(
