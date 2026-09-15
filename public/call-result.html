@@ -964,26 +964,90 @@ function createLeadManually() {
     button.disabled =
         true;
 
-
     button.textContent =
         'Создаём лид...';
 
 
+    document.getElementById(
+        'leadInfo'
+    ).textContent =
+        'Запускаем создание лида...';
+
+
     /*
-     * Используем уже готовую логику:
-     * - проверка дубля по CALL_ID;
-     * - получение компании/контакта;
-     * - ответственный;
-     * - телефон;
-     * - создание лида;
-     * - привязка дела звонка.
+     * Страховка от вечного зависания.
      */
+
+    const createTimeout =
+        setTimeout(
+            function () {
+
+                if (
+                    !leadId
+                    &&
+                    leadCreationInProgress
+                ) {
+
+                    leadCreationInProgress =
+                        false;
+
+
+                    button.disabled =
+                        false;
+
+                    button.textContent =
+                        '+ Создать лид';
+
+
+                    showError(
+                        'Создание лида зависло. Повторите попытку.'
+                    );
+
+
+                    document.getElementById(
+                        'leadInfo'
+                    ).textContent =
+                        'Не удалось завершить создание лида.';
+                }
+
+            },
+            10000
+        );
+
 
     ensureLeadForCall(
         callStatusData
     );
-}
 
+
+    /*
+     * Если лид успешно появится —
+     * таймер просто ничего не сделает.
+     */
+
+    const watchSuccess =
+        setInterval(
+            function () {
+
+                if (
+                    leadId
+                    ||
+                    !leadCreationInProgress
+                ) {
+
+                    clearTimeout(
+                        createTimeout
+                    );
+
+                    clearInterval(
+                        watchSuccess
+                    );
+                }
+
+            },
+            300
+        );
+}
 
 function showLeadCreatedActions() {
 
@@ -1096,15 +1160,13 @@ function ensureLeadForCall(
     }
 
 
-    leadCreationInProgress =
-        true;
+leadCreationInProgress =
+    true;
 
-
-    document.getElementById(
-        'leadInfo'
-    ).textContent =
-        'Проверяем, создавался ли уже лид для этого звонка...';
-
+document.getElementById(
+    'leadInfo'
+).textContent =
+    'Шаг 1/4: проверяем существующий лид...';
 
     const originId =
         buildOriginId(
@@ -1150,7 +1212,10 @@ function ensureLeadForCall(
                     result.error_description()
                 );
 
-
+document.getElementById(
+    'leadInfo'
+).textContent =
+    'Шаг 2/4: определяем клиента и ответственного...';
                 /*
                  * Даже если поиск не сработал,
                  * продолжаем создание.
@@ -1202,7 +1267,10 @@ function ensureLeadForCall(
                 return;
             }
 
-
+document.getElementById(
+    'leadInfo'
+).textContent =
+    'Шаг 2/4: определяем клиента и ответственного...';
             /*
              * Лида для этого CALL_ID ещё нет.
              * Получаем ответственного и
@@ -1988,10 +2056,12 @@ function getLeadStatusIdByName(
  * =========================================================
  */
 
-function createLeadFromContext(
-    context
-) {
-
+function createLeadFromContext(context) 
+{
+document.getElementById(
+    'leadInfo'
+).textContent =
+    'Шаг 3/4: определяем стадию «Новый»...';
     if (leadId) {
 
         leadCreationInProgress =
@@ -2135,11 +2205,12 @@ function createLeadFromContext(
             }
 
 
-            document.getElementById(
-                'leadInfo'
-            ).textContent =
-                'Создаём лид для текущего звонка...';
+           
 
+document.getElementById(
+    'leadInfo'
+).textContent =
+    'Шаг 4/4: создаём лид в CRM...';
 
             BX24.callMethod(
                 'crm.lead.add',
