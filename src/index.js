@@ -348,6 +348,313 @@ async function activityGuard(request) {
   });
 }
 
+
+async function getLeadStages(domain, accessToken) {
+  const response = await restCall(
+    domain,
+    accessToken,
+    'crm.status.list',
+    {
+      filter: {
+        ENTITY_ID: 'STATUS',
+      },
+      order: {
+        SORT: 'ASC',
+      },
+    }
+  );
+
+  if (response.error) {
+    return [];
+  }
+
+  return Array.isArray(response.result)
+    ? response.result
+    : [];
+}
+
+async function findLeadStatusIdByName(domain, accessToken, stageName) {
+  const stages = await getLeadStages(domain, accessToken);
+  const target = stages.find(
+    stage => normalizeText(stage?.NAME) === normalizeText(stageName)
+  );
+
+  return String(target?.STATUS_ID || '');
+}
+
+async function getPrimaryLeadContact(domain, accessToken, leadId) {
+  const response = await restCall(
+    domain,
+    accessToken,
+    'crm.lead.contact.items.get',
+    {
+      id: leadId,
+    }
+  );
+
+  if (response.error) {
+    return {
+      ok: false,
+      error: response.error,
+      contactId: 0,
+    };
+  }
+
+  const items = Array.isArray(response.result)
+    ? response.result
+    : [];
+
+  if (!items.length) {
+    return {
+      ok: true,
+      contactId: 0,
+    };
+  }
+
+  const primary =
+    items.find(
+      item => String(item?.IS_PRIMARY || '').toUpperCase() === 'Y'
+    )
+    || items[0];
+
+  return {
+    ok: true,
+    contactId: Number(primary?.CONTACT_ID || 0),
+  };
+}
+
+function contactHasPhone(contact) {
+  const phones = Array.isArray(contact?.PHONE)
+    ? contact.PHONE
+    : [];
+
+  return phones.some(
+    item => String(item?.VALUE || '').trim() !== ''
+  );
+}
+
+async function addLeadTimelineComment(
+  domain,
+  accessToken,
+  leadId,
+  comment
+) {
+  return restCall(
+    domain,
+    accessToken,
+    'crm.timeline.comment.add',
+    {
+      fields: {
+        ENTITY_ID: leadId,
+        ENTITY_TYPE: 'lead',
+        COMMENT: comment,
+      },
+    }
+  );
+}
+
+async function leadPhoneGuard(request) {
+  let form;
+
+  try {
+    form = await request.formData();
+  } catch {
+    return json({
+      ok: false,
+      error: 'bad_form_data',
+    }, 400);
+  }
+
+  const event = String(
+    form.get('event') || ''
+  ).toLowerCase();
+
+  if (event !== 'oncrmleadupdate') {
+    return json({
+      ok: true,
+      ignored: 'wrong_event',
+    });
+  }
+
+  const leadId = Number(
+    form.get('data[FIELDS][ID]')
+    ||
+    form.get('data[fields][ID]')
+    ||
+    0
+  );
+
+  const domain = String(
+    form.get('auth[domain]') || ''
+  );
+
+  const accessToken = String(
+    form.get('auth[access_token]') || ''
+  );
+
+  if (!leadId || !domain || !accessToken) {
+    return json({
+      ok: false,
+      error: 'missing_event_data',
+    });
+  }
+
+  const leadResponse = await restCall(
+    domain,
+    accessToken,
+    'crm.lead.get',
+    {
+      id: leadId,
+    }
+  );
+
+  if (leadResponse.error) {
+    return json({
+      ok: false,
+      error: 'lead_get_failed',
+      detail: leadResponse.error,
+    });
+  }
+
+  const lead = leadResponse.result || {};
+
+  const currentStatusId = String(
+    lead.STATUS_ID || ''
+  );
+
+  const newStatusId = await findLeadStatusIdByName(
+    domain,
+    accessToken,
+    'Новый'
+  );
+
+  if (!newStatusId) {
+    return json({
+      ok: false,
+      error: 'new_stage_not_found',
+    });
+  }
+
+  /*
+   * На стадии "Новый" телефон можно заполнить.
+   * Проверяем только попытку работать с лидом дальше.
+   */
+  if (currentStatusId === newStatusId) {
+    return json({
+      ok: true,
+      allowed: true,
+      stage: 'new',
+    });
+  }
+
+  const contactLink = await getPrimaryLeadContact(
+    domain,
+    accessToken,
+    leadId
+  );
+
+  let contactId = Number(
+    contactLink.contactId || 0
+  );
+
+  /*
+   * Fallback для старых карточек/порталов.
+   */
+  if (!contactId) {
+    contactId = Number(
+      lead.CONTACT_ID || 0
+    );
+  }
+
+  let reason = '';
+  let hasPhone = false;
+
+  if (!contactId) {
+    reason =
+      'В поле «Клиент» не выбран контакт. Добавьте контакт и заполните его телефон.';
+  } else {
+    const contactResponse = await restCall(
+      domain,
+      accessToken,
+      'crm.contact.get',
+      {
+        id: contactId,
+      }
+    );
+
+    if (contactResponse.error) {
+      reason =
+        'Не удалось проверить телефон связанного контакта.';
+    } else {
+      const contact =
+        contactResponse.result || {};
+
+      hasPhone =
+        contactHasPhone(contact);
+
+      if (!hasPhone) {
+        reason =
+          'У клиента не заполнен телефон. Заполните телефон в контакте из блока «Клиент».';
+      }
+    }
+  }
+
+  if (hasPhone) {
+    return json({
+      ok: true,
+      allowed: true,
+      leadId,
+      contactId,
+      statusId: currentStatusId,
+    });
+  }
+
+  /*
+   * Телефона нет — возвращаем лид в "Новый".
+   * Повторное ONCRMLEADUPDATE не зациклится:
+   * на "Новый" обработчик сразу завершится.
+   */
+  const rollback = await restCall(
+    domain,
+    accessToken,
+    'crm.lead.update',
+    {
+      id: leadId,
+      fields: {
+        STATUS_ID: newStatusId,
+      },
+    }
+  );
+
+  if (rollback.error) {
+    return json({
+      ok: false,
+      error: 'rollback_failed',
+      detail: rollback.error,
+      reason,
+    });
+  }
+
+  await addLeadTimelineComment(
+    domain,
+    accessToken,
+    leadId,
+    '⚠️ Лид возвращён в стадию «Новый». ' + reason
+  );
+
+  return json({
+    ok: true,
+    allowed: false,
+    rolledBack: true,
+    leadId,
+    contactId,
+    fromStatusId: currentStatusId,
+    toStatusId: newStatusId,
+    reason,
+  });
+}
+
+
 async function assetResponse(env, request, assetPath) {
   const url = new URL(request.url);
   url.pathname = assetPath;
@@ -396,6 +703,18 @@ export default {
 
       return activityGuard(request);
     }
+
+    if (path === '/lead-phone-guard.php') {
+      if (request.method !== 'POST') {
+        return json({
+          ok: true,
+          endpoint: 'lead-phone-guard',
+        });
+      }
+
+      return leadPhoneGuard(request);
+    }
+
 
     // Старый диагностический обработчик больше не нужен.
     // Возвращаем 200, пока install.php удаляет старые события.
