@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Установка CRM-инструментов</title>
+    <script src="https://api.bitrix24.com/api/v1/"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f7f8;
+            color: #252525;
+        }
+        .box {
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 22px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 12px rgba(0,0,0,.07);
+        }
+        h2 { margin: 0 0 8px; }
+        .subtitle {
+            margin-bottom: 18px;
+            color: #777;
+            font-size: 13px;
+        }
+        .line {
+            margin: 5px 0;
+            padding: 8px 10px;
+            border-radius: 5px;
+            background: #f6f8f9;
+            word-break: break-word;
+            font-size: 14px;
+        }
+        .ok { background: #e7f7ec; color: #24743a; }
+        .warn { background: #fff7e6; color: #8a5a00; }
+        .err { background: #fdeaea; color: #b93030; }
+        #finishButton {
+            display: none;
+            width: 100%;
+            margin-top: 18px;
+            padding: 13px;
+            border: 0;
+            border-radius: 6px;
+            background: #2fc6f6;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div class="box">
+    <h2>Установка CRM-инструментов</h2>
+    <div class="subtitle">
+        Удаляем старые tunnel-адреса и регистрируем обработчики на постоянном workers.dev.
+    </div>
+    <div id="status">
+        <div class="line">install.php загружен. Ожидаем BX24.init...</div>
+    </div>
+    <button id="finishButton" type="button" onclick="finishInstall()">
+        Завершить установку
+    </button>
+</div>
+
+<script>
+var finished = false;
+
+function log(text, type) {
+    var line = document.createElement('div');
+    line.className = 'line ' + (type || '');
+    line.textContent = text;
+    document.getElementById('status').appendChild(line);
+    if (window.console && console.log) {
+        console.log('[CRM INSTALL]', text);
+    }
+}
+
+function baseUrl() {
+    var href = window.location.href;
+    var q = href.indexOf('?');
+    if (q >= 0) href = href.substring(0, q);
+    var slash = href.lastIndexOf('/');
+    return slash >= 0 ? href.substring(0, slash + 1) : href;
+}
+
+function handlerUrl(fileName) {
+    return baseUrl() + fileName;
+}
+
+function arr(data) {
+    if (Object.prototype.toString.call(data) === '[object Array]') return data;
+    if (data && Object.prototype.toString.call(data.items) === '[object Array]') return data.items;
+    return [];
+}
+
+function call(method, params, callback) {
+    BX24.callMethod(method, params || {}, function(result) {
+        callback(result);
+    });
+}
+
+function placementName(item) {
+    return String(item.PLACEMENT || item.placement || '');
+}
+
+function placementHandler(item) {
+    return String(item.HANDLER || item.handler || '');
+}
+
+function eventName(item) {
+    return String(item.EVENT || item.event || '').toUpperCase();
+}
+
+function eventHandler(item) {
+    return String(item.HANDLER || item.handler || '');
+}
+
+function basename(url) {
+    var s = String(url || '');
+    var q = s.indexOf('?');
+    if (q >= 0) s = s.substring(0, q);
+    var p = s.lastIndexOf('/');
+    return p >= 0 ? s.substring(p + 1) : s;
+}
+
+var PLACEMENTS = [
+    {
+        placement: 'CRM_LEAD_DETAIL_ACTIVITY',
+        file: 'commercial.php',
+        title: 'КП'
+    },
+    {
+        placement: 'CRM_LEAD_DETAIL_ACTIVITY',
+        file: 'testdrive.php',
+        title: 'Тест-драйв'
+    },
+    {
+        placement: 'CALL_CARD',
+        file: 'call-result.php',
+        title: 'Результат звонка'
+    },
+    {
+        placement: 'CRM_LEAD_ACTIVITY_TIMELINE_MENU',
+        file: 'call-complete.php',
+        title: 'Завершить звонок с результатом'
+    }
+];
+
+var KNOWN_PLACEMENT_FILES = [
+    'commercial.php',
+    'testdrive.php',
+    'call-result.php',
+    'call-complete.php'
+];
+
+var EVENTS = [
+    {
+        event: 'ONCRMACTIVITYUPDATE',
+        file: 'activity-guard.php'
+    }
+];
+
+var KNOWN_EVENT_FILES = [
+    'activity-guard.php',
+    'lead-status-logger.php'
+];
+
+function getPlacements(callback) {
+    call('placement.get', {}, function(result) {
+        if (result.error()) {
+            log('placement.get: ' + result.error_description(), 'err');
+            callback([]);
+            return;
+        }
+        callback(arr(result.data()));
+    });
+}
+
+function cleanupPlacements(items, index, callback) {
+    if (index >= items.length) {
+        callback();
+        return;
+    }
+
+    var item = items[index] || {};
+    var placement = placementName(item);
+    var handler = placementHandler(item);
+    var file = basename(handler);
+
+    if (KNOWN_PLACEMENT_FILES.indexOf(file) < 0) {
+        cleanupPlacements(items, index + 1, callback);
+        return;
+    }
+
+    var correct = handler === handlerUrl(file);
+
+    if (correct) {
+        log('Оставляем: ' + placement + ' → ' + handler, 'ok');
+        cleanupPlacements(items, index + 1, callback);
+        return;
+    }
+
+    call('placement.unbind', {
+        PLACEMENT: placement,
+        HANDLER: handler
+    }, function(result) {
+        if (result.error()) {
+            log('Не удалено: ' + handler + ' — ' + result.error_description(), 'warn');
+        } else {
+            log('Удалён старый URL: ' + handler, 'ok');
+        }
+        cleanupPlacements(items, index + 1, callback);
+    });
+}
+
+function ensurePlacement(items, index, callback) {
+    if (index >= PLACEMENTS.length) {
+        callback();
+        return;
+    }
+
+    var expected = PLACEMENTS[index];
+    var expectedHandler = handlerUrl(expected.file);
+    var exists = false;
+
+    for (var i = 0; i < items.length; i++) {
+        if (
+            placementName(items[i]) === expected.placement
+            &&
+            placementHandler(items[i]) === expectedHandler
+        ) {
+            exists = true;
+            break;
+        }
+    }
+
+    if (exists) {
+        log('Уже зарегистрировано: ' + expected.title, 'ok');
+        ensurePlacement(items, index + 1, callback);
+        return;
+    }
+
+    call('placement.bind', {
+        PLACEMENT: expected.placement,
+        HANDLER: expectedHandler,
+        TITLE: expected.title,
+        LANG_ALL: {
+            ru: { TITLE: expected.title }
+        }
+    }, function(result) {
+        if (result.error()) {
+            log(
+                'ОШИБКА ' + expected.title + ': ' +
+                result.error() + ' — ' + result.error_description(),
+                'err'
+            );
+        } else {
+            log('Зарегистрировано: ' + expected.title + ' → ' + expectedHandler, 'ok');
+        }
+
+        ensurePlacement(items, index + 1, callback);
+    });
+}
+
+function getEvents(callback) {
+    call('event.get', {}, function(result) {
+        if (result.error()) {
+            log('event.get: ' + result.error_description(), 'warn');
+            callback([]);
+            return;
+        }
+        callback(arr(result.data()));
+    });
+}
+
+function cleanupEvents(items, index, callback) {
+    if (index >= items.length) {
+        callback();
+        return;
+    }
+
+    var item = items[index] || {};
+    var ev = eventName(item);
+    var handler = eventHandler(item);
+    var file = basename(handler);
+
+    if (KNOWN_EVENT_FILES.indexOf(file) < 0) {
+        cleanupEvents(items, index + 1, callback);
+        return;
+    }
+
+    var keep =
+        ev === 'ONCRMACTIVITYUPDATE'
+        &&
+        handler === handlerUrl('activity-guard.php');
+
+    if (keep) {
+        log('Оставляем событие: ' + ev + ' → ' + handler, 'ok');
+        cleanupEvents(items, index + 1, callback);
+        return;
+    }
+
+    call('event.unbind', {
+        event: ev,
+        handler: handler
+    }, function(result) {
+        if (result.error()) {
+            log('Не удалено событие ' + ev + ': ' + result.error_description(), 'warn');
+        } else {
+            log('Удалено старое событие: ' + ev + ' → ' + handler, 'ok');
+        }
+        cleanupEvents(items, index + 1, callback);
+    });
+}
+
+function ensureEvent(items, index, callback) {
+    if (index >= EVENTS.length) {
+        callback();
+        return;
+    }
+
+    var expected = EVENTS[index];
+    var expectedHandler = handlerUrl(expected.file);
+    var exists = false;
+
+    for (var i = 0; i < items.length; i++) {
+        if (
+            eventName(items[i]) === expected.event
+            &&
+            eventHandler(items[i]) === expectedHandler
+        ) {
+            exists = true;
+            break;
+        }
+    }
+
+    if (exists) {
+        log('Событие уже зарегистрировано: ' + expected.event, 'ok');
+        ensureEvent(items, index + 1, callback);
+        return;
+    }
+
+    call('event.bind', {
+        event: expected.event,
+        handler: expectedHandler
+    }, function(result) {
+        if (result.error()) {
+            log(
+                'ОШИБКА события ' + expected.event + ': ' +
+                result.error_description(),
+                'warn'
+            );
+        } else {
+            log('Зарегистрировано событие: ' + expected.event, 'ok');
+        }
+        ensureEvent(items, index + 1, callback);
+    });
+}
+
+function runInstall() {
+    getPlacements(function(placements) {
+        cleanupPlacements(placements, 0, function() {
+            getPlacements(function(freshPlacements) {
+                ensurePlacement(freshPlacements, 0, function() {
+                    getEvents(function(events) {
+                        cleanupEvents(events, 0, function() {
+                            getEvents(function(freshEvents) {
+                                ensureEvent(freshEvents, 0, function() {
+                                    log('Готово. Все обработчики на текущем workers.dev.', 'ok');
+                                    document.getElementById('finishButton').style.display = 'block';
+                                    try { BX24.resizeWindow(950, 760); } catch (e) {}
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
+}
+
+function finishInstall() {
+    if (finished) return;
+    finished = true;
+    document.getElementById('finishButton').disabled = true;
+    BX24.installFinish();
+    log('installFinish отправлен.', 'ok');
+}
+
+BX24.init(function() {
+    log('BX24.init выполнен.', 'ok');
+    log('База обработчиков: ' + baseUrl(), '');
+    runInstall();
+});
+</script>
+</body>
+</html>

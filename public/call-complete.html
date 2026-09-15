@@ -1,0 +1,1138 @@
+<!doctype html>
+<html lang="ru">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>
+        Завершить звонок с результатом
+    </title>
+
+    <script src="https://api.bitrix24.com/api/v1/"></script>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 18px;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background: #f5f7f8;
+            color: #333;
+        }
+
+        .card {
+            max-width: 620px;
+            margin: 0 auto;
+
+            padding: 22px;
+
+            background: #fff;
+
+            border-radius: 10px;
+
+            box-shadow:
+                0 2px 12px
+                rgba(0, 0, 0, .07);
+        }
+
+        h1 {
+            margin:
+                0
+                0
+                8px;
+
+            font-size: 22px;
+        }
+
+        .subtitle {
+            margin-bottom: 20px;
+
+            color: #777;
+            font-size: 13px;
+        }
+
+        .info {
+            margin-bottom: 16px;
+
+            padding: 10px 12px;
+
+            border-radius: 6px;
+
+            background: #f6f8f9;
+
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+
+            margin-bottom: 7px;
+
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .required {
+            color: #d93025;
+        }
+
+        select {
+            width: 100%;
+
+            padding: 11px 12px;
+
+            border:
+                1px solid
+                #c6cdd3;
+
+            border-radius: 6px;
+
+            background: #fff;
+
+            font-size: 15px;
+            outline: none;
+        }
+
+        select:focus {
+            border-color: #2fc6f6;
+        }
+
+        button {
+            width: 100%;
+
+            padding: 12px;
+
+            border: 0;
+            border-radius: 6px;
+
+            background: #2fc6f6;
+            color: #fff;
+
+            font-size: 15px;
+            font-weight: 600;
+
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #22b9e8;
+        }
+
+        button:disabled {
+            opacity: .6;
+            cursor: default;
+        }
+
+        .message {
+            display: none;
+
+            margin-top: 14px;
+
+            padding: 10px 12px;
+
+            border-radius: 6px;
+
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .message.error {
+            display: block;
+
+            background: #fdeaea;
+            color: #b93030;
+        }
+
+        .message.success {
+            display: block;
+
+            background: #e7f7ec;
+            color: #24743a;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="card">
+
+    <h1>
+        Завершить звонок
+    </h1>
+
+
+    <div class="subtitle">
+        Выберите обязательный результат звонка.
+        После сохранения звонок будет отмечен выполненным.
+    </div>
+
+
+    <div
+        class="info"
+        id="info"
+    >
+        Загрузка данных звонка...
+    </div>
+
+
+    <div class="form-group">
+
+        <label for="callResult">
+            Результат звонка
+            <span class="required">*</span>
+        </label>
+
+
+        <select
+            id="callResult"
+            disabled
+        >
+
+            <option value="">
+                Загрузка вариантов...
+            </option>
+
+        </select>
+
+    </div>
+
+
+    <button
+        type="button"
+        id="saveButton"
+        onclick="saveAndComplete()"
+        disabled
+    >
+        Сохранить результат и завершить звонок
+    </button>
+
+
+    <div
+        id="message"
+        class="message"
+    ></div>
+
+</div>
+
+
+<script>
+
+let LEAD_ID = 0;
+
+
+let ACTIVITY_ID = 0;
+
+
+const CALL_RESULT_FIELD_TITLE =
+    'Результат звонка';
+
+
+let fieldCode =
+    '';
+
+let fieldId =
+    0;
+
+let activity =
+    null;
+
+
+/*
+ * =========================================================
+ * ИНИЦИАЛИЗАЦИЯ
+ * =========================================================
+ */
+
+BX24.init(
+    function () {
+
+        BX24.resizeWindow(
+            680,
+            520
+        );
+
+
+        var placementInfo =
+            BX24.placement.info();
+
+        var placementOptions =
+            placementInfo
+            &&
+            placementInfo.options
+            ?
+            placementInfo.options
+            :
+            {};
+
+
+        LEAD_ID =
+            Number(
+                placementOptions.ENTITY_ID
+                ||
+                placementOptions.ID
+                ||
+                0
+            );
+
+
+        ACTIVITY_ID =
+            Number(
+                placementOptions.ASSOCIATED_ENTITY_ID
+                ||
+                placementOptions.ACTIVITY_ID
+                ||
+                0
+            );
+
+
+        if (!LEAD_ID) {
+
+            showError(
+                'Не удалось определить ID лида.'
+            );
+
+            return;
+        }
+
+
+        if (!ACTIVITY_ID) {
+
+            showError(
+                'Не удалось определить ID дела звонка.'
+            );
+
+            return;
+        }
+
+
+        loadActivity();
+    }
+);
+
+
+/*
+ * =========================================================
+ * ПРОВЕРЯЕМ ДЕЛО
+ * =========================================================
+ */
+
+function loadActivity() {
+
+    BX24.callMethod(
+        'crm.activity.get',
+
+        {
+            id:
+                ACTIVITY_ID
+        },
+
+        function (result) {
+
+            if (result.error()) {
+
+                showError(
+                    'Не удалось получить дело: ' +
+                    result.error_description()
+                );
+
+                return;
+            }
+
+
+            activity =
+                result.data() || {};
+
+
+            /*
+             * TYPE_ID = 2 — звонок.
+             */
+
+            if (
+                Number(
+                    activity.TYPE_ID
+                )
+                !==
+                2
+            ) {
+
+                showError(
+                    'Этот пункт предназначен только для звонков.'
+                );
+
+                return;
+            }
+
+
+            document.getElementById(
+                'info'
+            ).textContent =
+                'Звонок #' +
+                ACTIVITY_ID +
+                ' · Лид #' +
+                LEAD_ID;
+
+
+            findCallResultField(
+                0
+            );
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * ИЩЕМ ПОЛЕ "РЕЗУЛЬТАТ ЗВОНКА"
+ * =========================================================
+ */
+
+function findCallResultField(
+    start
+) {
+
+    BX24.callMethod(
+        'crm.lead.userfield.list',
+
+        {
+            order: {
+
+                SORT:
+                    'ASC',
+
+                ID:
+                    'ASC'
+            },
+
+            filter: {
+
+                USER_TYPE_ID:
+                    'enumeration',
+
+                LANG:
+                    'ru'
+            },
+
+            start:
+                start
+        },
+
+        function (result) {
+
+            if (result.error()) {
+
+                showError(
+                    'Не удалось получить пользовательские поля лида: ' +
+                    result.error_description()
+                );
+
+                return;
+            }
+
+
+            const fields =
+                result.data() || [];
+
+
+            const target =
+                fields.find(
+                    function (field) {
+
+                        return isTargetField(
+                            field
+                        );
+                    }
+                );
+
+
+            if (target) {
+
+                fieldCode =
+                    String(
+                        target.FIELD_NAME || ''
+                    );
+
+
+                fieldId =
+                    Number(
+                        target.ID || 0
+                    );
+
+
+                if (!fieldCode) {
+
+                    showError(
+                        'У поля «Результат звонка» не найден FIELD_NAME.'
+                    );
+
+                    return;
+                }
+
+
+                if (
+                    Array.isArray(
+                        target.LIST
+                    )
+                    &&
+                    target.LIST.length
+                ) {
+
+                    fillOptions(
+                        target.LIST
+                    );
+
+                    return;
+                }
+
+
+                loadFieldById();
+
+                return;
+            }
+
+
+            if (
+                typeof result.more ===
+                    'function'
+                &&
+                result.more()
+            ) {
+
+                const next =
+                    result.next();
+
+
+                if (
+                    next !== false
+                    &&
+                    next !== null
+                    &&
+                    next !== undefined
+                ) {
+
+                    findCallResultField(
+                        Number(next)
+                    );
+
+                    return;
+                }
+            }
+
+
+            showError(
+                'Не найдено поле списка «Результат звонка».'
+            );
+        }
+    );
+}
+
+
+function isTargetField(
+    field
+) {
+
+    const expected =
+        normalizeText(
+            CALL_RESULT_FIELD_TITLE
+        );
+
+
+    const labels = [
+
+        field.EDIT_FORM_LABEL,
+        field.LIST_COLUMN_LABEL,
+        field.LIST_FILTER_LABEL,
+        field.LABEL,
+        field.TITLE
+
+    ];
+
+
+    return labels.some(
+        function (label) {
+
+            if (
+                label
+                &&
+                typeof label ===
+                    'object'
+            ) {
+
+                label =
+                    label.ru || '';
+            }
+
+
+            return (
+                normalizeText(
+                    label
+                )
+                ===
+                expected
+            );
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * ПОЛУЧАЕМ ВАРИАНТЫ
+ * =========================================================
+ */
+
+function loadFieldById() {
+
+    if (!fieldId) {
+
+        loadOptionsFallback();
+
+        return;
+    }
+
+
+    BX24.callMethod(
+        'crm.lead.userfield.get',
+
+        {
+            id:
+                fieldId
+        },
+
+        function (result) {
+
+            if (result.error()) {
+
+                loadOptionsFallback();
+
+                return;
+            }
+
+
+            const field =
+                result.data() || {};
+
+
+            if (
+                Array.isArray(
+                    field.LIST
+                )
+                &&
+                field.LIST.length
+            ) {
+
+                fillOptions(
+                    field.LIST
+                );
+
+                return;
+            }
+
+
+            loadOptionsFallback();
+        }
+    );
+}
+
+
+function loadOptionsFallback() {
+
+    BX24.callMethod(
+        'crm.lead.fields',
+
+        {},
+
+        function (result) {
+
+            if (result.error()) {
+
+                showError(
+                    'Не удалось получить варианты поля.'
+                );
+
+                return;
+            }
+
+
+            const fields =
+                result.data() || {};
+
+
+            const field =
+                fields[
+                    fieldCode
+                ];
+
+
+            if (!field) {
+
+                showError(
+                    'Описание поля «Результат звонка» недоступно.'
+                );
+
+                return;
+            }
+
+
+            const items =
+                Array.isArray(
+                    field.items
+                )
+                ?
+                field.items
+                :
+                (
+                    Array.isArray(
+                        field.LIST
+                    )
+                    ?
+                    field.LIST
+                    :
+                    []
+                );
+
+
+            if (!items.length) {
+
+                showError(
+                    'У поля «Результат звонка» нет вариантов.'
+                );
+
+                return;
+            }
+
+
+            fillOptions(
+                items
+            );
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * SELECT
+ * =========================================================
+ */
+
+function fillOptions(
+    items
+) {
+
+    const select =
+        document.getElementById(
+            'callResult'
+        );
+
+
+    select.innerHTML =
+        '';
+
+
+    const placeholder =
+        document.createElement(
+            'option'
+        );
+
+
+    placeholder.value =
+        '';
+
+    placeholder.textContent =
+        'Выберите результат';
+
+
+    select.appendChild(
+        placeholder
+    );
+
+
+    items.forEach(
+        function (item) {
+
+            const id =
+                String(
+                    item.ID
+                    ??
+                    item.id
+                    ??
+                    ''
+                )
+                .trim();
+
+
+            const value =
+                String(
+                    item.VALUE
+                    ??
+                    item.value
+                    ??
+                    ''
+                )
+                .trim();
+
+
+            if (
+                !id
+                ||
+                !value
+            ) {
+                return;
+            }
+
+
+            if (
+                isEmptyResult(
+                    value
+                )
+            ) {
+                return;
+            }
+
+
+            const option =
+                document.createElement(
+                    'option'
+                );
+
+
+            option.value =
+                id;
+
+            option.textContent =
+                value;
+
+
+            select.appendChild(
+                option
+            );
+        }
+    );
+
+
+    if (
+        select.options.length <= 1
+    ) {
+
+        showError(
+            'Не найдено доступных вариантов результата звонка.'
+        );
+
+        return;
+    }
+
+
+    select.disabled =
+        false;
+
+
+    document.getElementById(
+        'saveButton'
+    ).disabled =
+        false;
+}
+
+
+/*
+ * =========================================================
+ * СОХРАНЯЕМ РЕЗУЛЬТАТ И ЗАВЕРШАЕМ ЗВОНОК
+ * =========================================================
+ */
+
+function saveAndComplete() {
+
+    const select =
+        document.getElementById(
+            'callResult'
+        );
+
+
+    const enumId =
+        String(
+            select.value || ''
+        );
+
+
+    if (!enumId) {
+
+        showError(
+            'Выберите результат звонка.'
+        );
+
+        return;
+    }
+
+
+    const resultText =
+        select.options[
+            select.selectedIndex
+        ]
+        ?
+        select.options[
+            select.selectedIndex
+        ].textContent
+        :
+        '';
+
+
+    setLoading(
+        true
+    );
+
+
+    const leadFields =
+        {};
+
+
+    leadFields[
+        fieldCode
+    ] =
+        enumId;
+
+
+    /*
+     * Сначала записываем результат в лид.
+     * Только потом закрываем дело.
+     *
+     * Поэтому activity-guard увидит уже
+     * заполненное поле и не переоткроет звонок.
+     */
+
+    BX24.callMethod(
+        'crm.lead.update',
+
+        {
+            id:
+                LEAD_ID,
+
+            fields:
+                leadFields
+        },
+
+        function (leadResult) {
+
+            if (leadResult.error()) {
+
+                setLoading(
+                    false
+                );
+
+
+                showError(
+                    'Не удалось сохранить результат звонка: ' +
+                    leadResult.error_description()
+                );
+
+                return;
+            }
+
+
+            BX24.callMethod(
+                'crm.activity.update',
+
+                {
+                    id:
+                        ACTIVITY_ID,
+
+                    fields: {
+
+                        OWNER_ID:
+                            Number(
+                                activity.OWNER_ID
+                                ||
+                                LEAD_ID
+                            ),
+
+                        OWNER_TYPE_ID:
+                            Number(
+                                activity.OWNER_TYPE_ID
+                                ||
+                                1
+                            ),
+
+                        TYPE_ID:
+                            2,
+
+                        COMPLETED:
+                            'Y'
+                    }
+                },
+
+                function (activityResult) {
+
+                    if (
+                        activityResult.error()
+                    ) {
+
+                        setLoading(
+                            false
+                        );
+
+
+                        showError(
+                            'Результат сохранён, но звонок не удалось завершить: ' +
+                            activityResult.error_description()
+                        );
+
+                        return;
+                    }
+
+
+                    showSuccess(
+                        'Звонок завершён. Результат: ' +
+                        resultText
+                    );
+
+
+                    setTimeout(
+                        function () {
+
+                            BX24.reloadWindow(
+                                function () {
+
+                                    BX24.closeApplication();
+                                }
+                            );
+
+                        },
+                        700
+                    );
+                }
+            );
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * ИНТЕРФЕЙС
+ * =========================================================
+ */
+
+function normalizeText(
+    value
+) {
+
+    return String(
+        value || ''
+    )
+    .trim()
+    .toLowerCase()
+    .replace(
+        /\s+/g,
+        ' '
+    );
+}
+
+
+function isEmptyResult(
+    value
+) {
+
+    const normalized =
+        normalizeText(
+            value
+        );
+
+
+    return (
+        normalized ===
+            'не выбрано'
+        ||
+        normalized ===
+            'не выбран'
+        ||
+        normalized ===
+            'не выбрана'
+        ||
+        normalized ===
+            'не выбрано.'
+    );
+}
+
+
+function setLoading(
+    loading
+) {
+
+    const button =
+        document.getElementById(
+            'saveButton'
+        );
+
+
+    button.disabled =
+        loading;
+
+
+    button.textContent =
+        loading
+        ?
+        'Сохраняем...'
+        :
+        'Сохранить результат и завершить звонок';
+}
+
+
+function showError(
+    text
+) {
+
+    const message =
+        document.getElementById(
+            'message'
+        );
+
+
+    message.className =
+        'message error';
+
+
+    message.textContent =
+        text;
+}
+
+
+function showSuccess(
+    text
+) {
+
+    const message =
+        document.getElementById(
+            'message'
+        );
+
+
+    message.className =
+        'message success';
+
+
+    message.textContent =
+        text;
+}
+
+</script>
+
+</body>
+
+</html>

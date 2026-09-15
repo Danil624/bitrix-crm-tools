@@ -1,0 +1,4328 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+
+    <title>Результат звонка</title>
+
+    <script src="https://api.bitrix24.com/api/v1/"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 16px;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background: #f5f7f8;
+            color: #333;
+        }
+
+        .card {
+            background: #fff;
+
+            border-radius: 10px;
+
+            padding: 18px;
+
+            box-shadow:
+                0 2px 12px
+                rgba(0, 0, 0, .07);
+        }
+
+        .title {
+            margin: 0 0 6px;
+
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            margin-bottom: 16px;
+
+            color: #7a7a7a;
+            font-size: 13px;
+        }
+
+        .info {
+            margin-bottom: 10px;
+
+            padding: 10px 12px;
+
+            background: #f6f8f9;
+
+            border-radius: 6px;
+
+            color: #555;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .info.ok {
+            background: #e7f7ec;
+            color: #24743a;
+        }
+
+        .call-status {
+            margin-bottom: 16px;
+
+            padding: 10px 12px;
+
+            border-radius: 6px;
+
+            background: #eef6fb;
+
+            font-size: 13px;
+        }
+
+        .call-status.finished {
+            background: #fff7e6;
+        }
+
+        .lead-actions {
+            display: flex;
+
+            margin-bottom: 16px;
+
+            gap: 10px;
+        }
+
+        .lead-actions.visible {
+            display: flex;
+        }
+
+        .lead-actions button {
+            flex: 1;
+
+            margin-top: 0;
+        }
+
+        .button-secondary {
+            background: #eef2f4;
+            color: #333;
+        }
+
+        .button-secondary:hover {
+            background: #e1e6e9;
+        }
+
+        .form-wrap {
+            display: block;
+        }
+
+        .form-wrap.visible {
+            display: block;
+        }
+
+        label {
+            display: block;
+
+            margin-bottom: 7px;
+
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .required {
+            color: #d93025;
+        }
+
+        select {
+            width: 100%;
+
+            padding: 11px 12px;
+
+            border: 1px solid #c6cdd3;
+            border-radius: 6px;
+
+            background: #fff;
+
+            font-size: 15px;
+
+            outline: none;
+        }
+
+        select:focus {
+            border-color: #2fc6f6;
+        }
+
+        button {
+            width: 100%;
+
+            margin-top: 16px;
+
+            padding: 12px;
+
+            border: none;
+            border-radius: 6px;
+
+            background: #2fc6f6;
+            color: #fff;
+
+            font-size: 15px;
+            font-weight: 600;
+
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #22b9e8;
+        }
+
+        button:disabled {
+            opacity: .6;
+            cursor: default;
+        }
+
+        .message {
+            display: none;
+
+            margin-top: 14px;
+
+            padding: 10px 12px;
+
+            border-radius: 6px;
+
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .message.error {
+            display: block;
+
+            background: #fdeaea;
+            color: #b93030;
+        }
+
+        .message.success {
+            display: block;
+
+            background: #e7f7ec;
+            color: #24743a;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="card">
+
+    <h1 class="title">
+        Результат звонка
+    </h1>
+
+    <div class="subtitle">
+        Если для звонка нужен новый лид — создайте его одной кнопкой.
+        После завершения звонка выберите результат.
+    </div>
+
+
+    <div
+        class="info"
+        id="leadInfo"
+    >
+        Ожидаем данные текущего звонка...
+    </div>
+
+
+    <div
+        class="lead-actions"
+        id="leadActions"
+    >
+
+        <button
+            type="button"
+            id="createLeadButton"
+            onclick="createLeadManually()"
+            disabled
+        >
+            Ожидаем данные звонка...
+        </button>
+
+
+        <button
+            type="button"
+            id="openLeadButton"
+            class="button-secondary"
+            onclick="openLead()"
+            style="display:none;"
+        >
+            Открыть лид
+        </button>
+
+    </div>
+
+
+    <div
+        class="info"
+        id="bindingInfo"
+    >
+        Привязка звонка будет проверена после получения данных.
+    </div>
+
+
+    <div
+        class="call-status"
+        id="callStatus"
+    >
+        Виджет загружен. Ожидаем данные звонка от Bitrix24...
+    </div>
+
+
+    <div
+        class="form-wrap"
+        id="formWrap"
+    >
+
+        <label for="callResult">
+            Результат звонка
+            <span class="required">*</span>
+        </label>
+
+        <select
+            id="callResult"
+            disabled
+        >
+            <option value="">
+                Загружаем варианты результата...
+            </option>
+        </select>
+
+
+        <button
+            type="button"
+            id="saveButton"
+            onclick="saveCallResult()"
+            disabled
+        >
+            Сохранить результат
+        </button>
+
+    </div>
+
+
+    <div
+        class="message"
+        id="message"
+    ></div>
+
+</div>
+
+
+<script>
+
+/*
+ * =========================================================
+ * НАСТРОЙКИ
+ * =========================================================
+ */
+
+const CALL_RESULT_FIELD_TITLE =
+    'Результат звонка';
+
+
+const LEAD_ORIGINATOR_ID =
+    'CALL_RESULT_APP';
+
+
+/*
+ * =========================================================
+ * СОСТОЯНИЕ
+ * =========================================================
+ */
+
+let callStatusData = {};
+
+let callId = '';
+
+let phoneNumber = '';
+
+let currentCallState = '';
+
+let crmActivityId = 0;
+
+let leadId = 0;
+
+let leadCreationInProgress = false;
+
+let activityBindingInProgress = false;
+
+let resultSaved = false;
+
+let resultModeEnabled = false;
+
+let callResultFieldCode = '';
+
+let callResultFieldId = 0;
+
+let keepAliveTimer = null;
+
+let activityRetryTimer = null;
+
+let activityRetryCount = 0;
+
+let statusPollTimer = null;
+
+let statusPollAttempts = 0;
+
+let statusRequestInProgress = false;
+
+
+/*
+ * =========================================================
+ * ИНИЦИАЛИЗАЦИЯ
+ * =========================================================
+ */
+
+BX24.init(function () {
+
+    try {
+
+        BX24.resizeWindow(
+            560,
+            690
+        );
+
+    } catch (e) {
+
+        console.warn(
+            'resizeWindow недоступен:',
+            e
+        );
+    }
+
+
+    /*
+     * Варианты результата загружаем сразу.
+     * Форма видна даже до появления CALL_ID.
+     */
+
+    loadCallResultField();
+
+
+    /*
+     * Сразу показываем кнопку создания лида.
+     * Пока CALL_ID не пришёл, она будет disabled.
+     */
+
+    syncCreateLeadButtonState();
+
+
+    /*
+     * Не даём ошибке одного bindEvent
+     * сломать весь виджет.
+     */
+
+    try {
+
+        BX24.placement.bindEvent(
+            'CallCard::EntityChanged',
+
+            function (eventData) {
+
+                console.log(
+                    'CallCard::EntityChanged',
+                    eventData
+                );
+
+                refreshCallStatus();
+            }
+        );
+
+    } catch (e) {
+
+        console.warn(
+            'CallCard::EntityChanged bind error:',
+            e
+        );
+    }
+
+
+    try {
+
+        BX24.placement.bindEvent(
+            'CallCard::CallStateChanged',
+
+            function (
+                callState,
+                additionalParams
+            ) {
+
+                console.log(
+                    'CallCard::CallStateChanged',
+                    callState,
+                    additionalParams
+                );
+
+
+                currentCallState =
+                    String(
+                        callState || ''
+                    );
+
+
+                handleCallState(
+                    currentCallState
+                );
+
+
+                setTimeout(
+                    refreshCallStatus,
+                    250
+                );
+            }
+        );
+
+    } catch (e) {
+
+        console.warn(
+            'CallCard::CallStateChanged bind error:',
+            e
+        );
+    }
+
+
+    try {
+
+        BX24.placement.bindEvent(
+            'CallCard::BeforeClose',
+
+            function () {
+
+                if (
+                    resultModeEnabled
+                    &&
+                    !resultSaved
+                ) {
+
+                    blockAutoClose();
+
+                    showError(
+                        'Сначала выберите и сохраните результат звонка.'
+                    );
+                }
+            }
+        );
+
+    } catch (e) {
+
+        console.warn(
+            'CallCard::BeforeClose bind error:',
+            e
+        );
+    }
+
+
+    /*
+     * getStatus не всегда готов в первый момент.
+     * Поэтому не ждём события, а сами опрашиваем
+     * карточку звонка.
+     */
+
+    refreshCallStatus();
+
+    startStatusPolling();
+
+});
+
+
+/*
+ * =========================================================
+ * ПОЛУЧАЕМ ПОЛНЫЙ СТАТУС CALL_CARD
+ * =========================================================
+ */
+
+function refreshCallStatus() {
+
+    if (
+        statusRequestInProgress
+    ) {
+        return;
+    }
+
+
+    statusRequestInProgress =
+        true;
+
+
+    try {
+
+        BX24.placement.call(
+            'getStatus',
+            {},
+
+            function (status) {
+
+                statusRequestInProgress =
+                    false;
+
+
+                if (!status) {
+
+                    syncCreateLeadButtonState();
+
+                    return;
+                }
+
+
+                console.log(
+                    'CALL_CARD getStatus',
+                    status
+                );
+
+
+                applyCallStatus(
+                    status
+                );
+            }
+        );
+
+    } catch (e) {
+
+        statusRequestInProgress =
+            false;
+
+
+        console.warn(
+            'CALL_CARD getStatus error:',
+            e
+        );
+
+
+        document.getElementById(
+            'callStatus'
+        ).textContent =
+            'Виджет открыт. Ожидаем контекст звонка от Bitrix24...';
+
+
+        syncCreateLeadButtonState();
+    }
+}
+
+
+/*
+ * =========================================================
+ * ПЕРИОДИЧЕСКИ ОПРАШИВАЕМ CALL_CARD
+ * =========================================================
+ */
+
+function startStatusPolling() {
+
+    if (
+        statusPollTimer
+    ) {
+        return;
+    }
+
+
+    statusPollTimer =
+        setInterval(
+            function () {
+
+                statusPollAttempts++;
+
+
+                refreshCallStatus();
+
+
+                /*
+                 * Первые ~20 секунд опрашиваем часто.
+                 * Потом оставляем более спокойный режим.
+                 */
+
+                if (
+                    statusPollAttempts === 40
+                ) {
+
+                    clearInterval(
+                        statusPollTimer
+                    );
+
+
+                    statusPollTimer =
+                        setInterval(
+                            refreshCallStatus,
+                            2000
+                        );
+                }
+
+            },
+            500
+        );
+}
+
+
+/*
+ * =========================================================
+ * СОСТОЯНИЕ КНОПКИ СОЗДАНИЯ ЛИДА
+ * =========================================================
+ */
+
+function syncCreateLeadButtonState() {
+
+    var button =
+        document.getElementById(
+            'createLeadButton'
+        );
+
+
+    if (!button) {
+        return;
+    }
+
+
+    if (leadId) {
+
+        button.disabled =
+            false;
+
+        button.style.display =
+            'none';
+
+        return;
+    }
+
+
+    button.style.display =
+        'block';
+
+
+    if (
+        callId
+        &&
+        !leadCreationInProgress
+    ) {
+
+        button.disabled =
+            false;
+
+        button.textContent =
+            '+ Создать лид';
+
+    } else if (
+        leadCreationInProgress
+    ) {
+
+        button.disabled =
+            true;
+
+        button.textContent =
+            'Создаём лид...';
+
+    } else {
+
+        button.disabled =
+            true;
+
+        button.textContent =
+            'Ожидаем данные звонка...';
+    }
+}
+
+
+/*
+ * =========================================================
+ * ОБРАБАТЫВАЕМ СТАТУС
+ * =========================================================
+ */
+
+function applyCallStatus(
+    status
+) {
+
+    callStatusData =
+        status || {};
+
+
+    callId =
+        String(
+            status.CALL_ID || callId || ''
+        );
+
+
+    phoneNumber =
+        String(
+            status.PHONE_NUMBER || phoneNumber || ''
+        );
+
+
+    currentCallState =
+        String(
+            status.CALL_STATE || currentCallState || ''
+        );
+
+
+    crmActivityId =
+        normalizePositiveId(
+            status.CRM_ACTIVITY_ID
+        );
+
+
+    syncCreateLeadButtonState();
+
+
+    /*
+     * Если у звонка уже есть лид —
+     * используем его.
+     *
+     * Если лида нет — НЕ создаём автоматически.
+     * Показываем менеджеру кнопку "+ Создать лид".
+     */
+
+    const existingLeadId =
+        findLeadIdInStatus(
+            status
+        );
+
+
+    if (existingLeadId) {
+
+        setLead(
+            existingLeadId,
+            false
+        );
+
+    } else if (!leadId) {
+
+        showCreateLeadButton();
+    }
+
+
+    /*
+     * Если лид уже известен —
+     * пытаемся привязать к нему
+     * CRM-дело звонка.
+     */
+
+    if (leadId) {
+
+        ensureCallActivityBinding();
+    }
+
+
+    handleCallState(
+        currentCallState
+    );
+}
+
+
+/*
+ * =========================================================
+ * ИЩЕМ ЛИД СРЕДИ ПРИВЯЗОК ЗВОНКА
+ * =========================================================
+ */
+
+function findLeadIdInStatus(
+    status
+) {
+
+    const mainType =
+        String(
+            status.CRM_ENTITY_TYPE || ''
+        ).toUpperCase();
+
+
+    const mainId =
+        normalizePositiveId(
+            status.CRM_ENTITY_ID
+        );
+
+
+    if (
+        mainType === 'LEAD'
+        &&
+        mainId
+    ) {
+
+        return mainId;
+    }
+
+
+    const bindings =
+        Array.isArray(
+            status.CRM_BINDINGS
+        )
+        ?
+        status.CRM_BINDINGS
+        :
+        [];
+
+
+    const leadBinding =
+        bindings.find(
+            function (binding) {
+
+                return (
+                    String(
+                        binding.ENTITY_TYPE || ''
+                    ).toUpperCase()
+                    ===
+                    'LEAD'
+                    &&
+                    normalizePositiveId(
+                        binding.ENTITY_ID
+                    ) > 0
+                );
+            }
+        );
+
+
+    return leadBinding
+        ?
+        normalizePositiveId(
+            leadBinding.ENTITY_ID
+        )
+        :
+        0;
+}
+
+
+/*
+ * =========================================================
+ * КНОПКА "+ СОЗДАТЬ ЛИД"
+ * =========================================================
+ */
+
+function showCreateLeadButton() {
+
+    document.getElementById(
+        'leadInfo'
+    ).className =
+        'info';
+
+
+    document.getElementById(
+        'leadInfo'
+    ).textContent =
+        callId
+        ?
+        'К звонку новый лид не привязан.'
+        :
+        'Ожидаем данные текущего звонка...';
+
+
+    var actions =
+        document.getElementById(
+            'leadActions'
+        );
+
+
+    actions.classList.add(
+        'visible'
+    );
+
+
+    document.getElementById(
+        'openLeadButton'
+    ).style.display =
+        'none';
+
+
+    syncCreateLeadButtonState();
+}
+
+
+function createLeadManually() {
+
+    if (leadId) {
+
+        openLead();
+
+        return;
+    }
+
+
+    if (!callId) {
+
+        showError(
+            'Данные звонка ещё загружаются. Подождите 1–2 секунды.'
+        );
+
+        refreshCallStatus();
+
+        startStatusPolling();
+
+        syncCreateLeadButtonState();
+
+        return;
+    }
+
+
+    const button =
+        document.getElementById(
+            'createLeadButton'
+        );
+
+
+    button.disabled =
+        true;
+
+
+    button.textContent =
+        'Создаём лид...';
+
+
+    /*
+     * Используем уже готовую логику:
+     * - проверка дубля по CALL_ID;
+     * - получение компании/контакта;
+     * - ответственный;
+     * - телефон;
+     * - создание лида;
+     * - привязка дела звонка.
+     */
+
+    ensureLeadForCall(
+        callStatusData
+    );
+}
+
+
+function showLeadCreatedActions() {
+
+    const actions =
+        document.getElementById(
+            'leadActions'
+        );
+
+
+    actions.classList.add(
+        'visible'
+    );
+
+
+    const createButton =
+        document.getElementById(
+            'createLeadButton'
+        );
+
+
+    createButton.disabled =
+        false;
+
+
+    createButton.style.display =
+        'none';
+
+
+    createButton.textContent =
+        '+ Создать лид';
+
+
+    document.getElementById(
+        'openLeadButton'
+    ).style.display =
+        'block';
+}
+
+
+function openLead() {
+
+    if (!leadId) {
+
+        showError(
+            'Лид ещё не создан.'
+        );
+
+        return;
+    }
+
+
+    BX24.openPath(
+        '/crm/lead/details/' +
+        leadId +
+        '/'
+    );
+}
+
+
+/*
+ * =========================================================
+ * СОЗДАЁМ ЛИД ПО КНОПКЕ, ЕСЛИ ЕГО НЕТ
+ * =========================================================
+ */
+
+function ensureLeadForCall(
+    status
+) {
+
+    if (
+        leadId
+        ||
+        leadCreationInProgress
+    ) {
+        return;
+    }
+
+
+    /*
+     * CALL_ID используется как уникальный
+     * внешний идентификатор.
+     *
+     * Благодаря этому повторная загрузка
+     * виджета не создаст второй лид
+     * для того же звонка.
+     */
+
+    if (!callId) {
+
+        document.getElementById(
+            'leadInfo'
+        ).textContent =
+            'Ожидаем идентификатор звонка для создания лида...';
+
+
+        const button =
+            document.getElementById(
+                'createLeadButton'
+            );
+
+
+        button.disabled =
+            false;
+
+        button.textContent =
+            '+ Создать лид';
+
+
+        return;
+    }
+
+
+    leadCreationInProgress =
+        true;
+
+
+    document.getElementById(
+        'leadInfo'
+    ).textContent =
+        'Проверяем, создавался ли уже лид для этого звонка...';
+
+
+    const originId =
+        buildOriginId(
+            callId
+        );
+
+
+    /*
+     * Сначала ищем наш лид по CALL_ID.
+     */
+
+    BX24.callMethod(
+        'crm.lead.list',
+
+        {
+            order: {
+                ID:
+                    'DESC'
+            },
+
+            filter: {
+
+                ORIGINATOR_ID:
+                    LEAD_ORIGINATOR_ID,
+
+                ORIGIN_ID:
+                    originId
+            },
+
+            select: [
+                'ID',
+                'TITLE'
+            ]
+        },
+
+        function (result) {
+
+            if (result.error()) {
+
+                console.warn(
+                    'Не удалось проверить существующий лид:',
+                    result.error(),
+                    result.error_description()
+                );
+
+
+                /*
+                 * Даже если поиск не сработал,
+                 * продолжаем создание.
+                 */
+
+                resolveLeadContext(
+                    status,
+                    function (context) {
+                        ensureClientContextByPhone(
+                            context,
+                            createLeadFromContext
+                        );
+                    }
+                );
+
+                return;
+            }
+
+
+            const leads =
+                result.data() || [];
+
+
+            if (
+                leads.length > 0
+            ) {
+
+                const foundId =
+                    normalizePositiveId(
+                        leads[0].ID
+                    );
+
+
+                leadCreationInProgress =
+                    false;
+
+
+                setLead(
+                    foundId,
+                    true
+                );
+
+
+                showLeadCreatedActions();
+
+
+                ensureCallActivityBinding();
+
+                return;
+            }
+
+
+            /*
+             * Лида для этого CALL_ID ещё нет.
+             * Получаем ответственного и
+             * существующего клиента.
+             */
+
+            resolveLeadContext(
+                status,
+                function (context) {
+                    ensureClientContextByPhone(
+                        context,
+                        createLeadFromContext
+                    );
+                }
+            );
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * СОБИРАЕМ КОНТЕКСТ ИЗ КОМПАНИИ / КОНТАКТА / СДЕЛКИ
+ * =========================================================
+ */
+
+function resolveLeadContext(
+    status,
+    callback
+) {
+
+    const context = {
+
+        assignedById:
+            0,
+
+        contactId:
+            0,
+
+        companyId:
+            0,
+
+        clientTitle:
+            ''
+    };
+
+
+    const mainType =
+        String(
+            status.CRM_ENTITY_TYPE || ''
+        ).toUpperCase();
+
+
+    const mainId =
+        normalizePositiveId(
+            status.CRM_ENTITY_ID
+        );
+
+
+    const bindings =
+        Array.isArray(
+            status.CRM_BINDINGS
+        )
+        ?
+        status.CRM_BINDINGS
+        :
+        [];
+
+
+    /*
+     * Забираем CONTACT / COMPANY
+     * из всех привязок.
+     */
+
+    bindings.forEach(
+        function (binding) {
+
+            const type =
+                String(
+                    binding.ENTITY_TYPE || ''
+                ).toUpperCase();
+
+
+            const id =
+                normalizePositiveId(
+                    binding.ENTITY_ID
+                );
+
+
+            if (
+                type === 'CONTACT'
+                &&
+                id
+                &&
+                !context.contactId
+            ) {
+
+                context.contactId =
+                    id;
+            }
+
+
+            if (
+                type === 'COMPANY'
+                &&
+                id
+                &&
+                !context.companyId
+            ) {
+
+                context.companyId =
+                    id;
+            }
+        }
+    );
+
+
+    /*
+     * Основная сущность тоже учитывается.
+     */
+
+    if (
+        mainType === 'CONTACT'
+        &&
+        mainId
+    ) {
+
+        context.contactId =
+            mainId;
+    }
+
+
+    if (
+        mainType === 'COMPANY'
+        &&
+        mainId
+    ) {
+
+        context.companyId =
+            mainId;
+    }
+
+
+    /*
+     * Если звонок связан со сделкой,
+     * из неё удобно взять ответственного,
+     * контакт и компанию.
+     */
+
+    if (
+        mainType === 'DEAL'
+        &&
+        mainId
+    ) {
+
+        BX24.callMethod(
+            'crm.deal.get',
+
+            {
+                id:
+                    mainId
+            },
+
+            function (result) {
+
+                if (!result.error()) {
+
+                    const deal =
+                        result.data() || {};
+
+
+                    context.assignedById =
+                        normalizePositiveId(
+                            deal.ASSIGNED_BY_ID
+                        );
+
+
+                    context.contactId =
+                        normalizePositiveId(
+                            deal.CONTACT_ID
+                        )
+                        ||
+                        context.contactId;
+
+
+                    context.companyId =
+                        normalizePositiveId(
+                            deal.COMPANY_ID
+                        )
+                        ||
+                        context.companyId;
+
+
+                    context.clientTitle =
+                        String(
+                            deal.TITLE || ''
+                        ).trim();
+                }
+
+
+                finishResolveClientContext(
+                    context,
+                    callback
+                );
+            }
+        );
+
+        return;
+    }
+
+
+    /*
+     * Если основная сущность — контакт.
+     */
+
+    if (
+        mainType === 'CONTACT'
+        &&
+        mainId
+    ) {
+
+        BX24.callMethod(
+            'crm.contact.get',
+
+            {
+                id:
+                    mainId
+            },
+
+            function (result) {
+
+                if (!result.error()) {
+
+                    const contact =
+                        result.data() || {};
+
+
+                    context.assignedById =
+                        normalizePositiveId(
+                            contact.ASSIGNED_BY_ID
+                        );
+
+
+                    context.companyId =
+                        normalizePositiveId(
+                            contact.COMPANY_ID
+                        )
+                        ||
+                        context.companyId;
+
+
+                    context.clientTitle =
+                        [
+                            contact.NAME,
+                            contact.SECOND_NAME,
+                            contact.LAST_NAME
+                        ]
+                        .filter(Boolean)
+                        .join(' ')
+                        .trim();
+                }
+
+
+                finishResolveClientContext(
+                    context,
+                    callback
+                );
+            }
+        );
+
+        return;
+    }
+
+
+    /*
+     * Если основная сущность — компания.
+     */
+
+    if (
+        mainType === 'COMPANY'
+        &&
+        mainId
+    ) {
+
+        BX24.callMethod(
+            'crm.company.get',
+
+            {
+                id:
+                    mainId
+            },
+
+            function (result) {
+
+                if (!result.error()) {
+
+                    const company =
+                        result.data() || {};
+
+
+                    context.assignedById =
+                        normalizePositiveId(
+                            company.ASSIGNED_BY_ID
+                        );
+
+
+                    context.clientTitle =
+                        String(
+                            company.TITLE || ''
+                        ).trim();
+                }
+
+
+                finishResolveClientContext(
+                    context,
+                    callback
+                );
+            }
+        );
+
+        return;
+    }
+
+
+    /*
+     * Основной сущности нет либо она другая,
+     * но в CRM_BINDINGS могла быть компания
+     * или контакт.
+     */
+
+    finishResolveClientContext(
+        context,
+        callback
+    );
+}
+
+
+/*
+ * =========================================================
+ * ЕСЛИ ОТВЕТСТВЕННЫЙ ЕЩЁ НЕ НАЙДЕН,
+ * БЕРЁМ ЕГО ИЗ КОНТАКТА/КОМПАНИИ
+ * =========================================================
+ */
+
+function finishResolveClientContext(
+    context,
+    callback
+) {
+
+    if (
+        context.assignedById
+    ) {
+
+        callback(
+            context
+        );
+
+        return;
+    }
+
+
+    if (
+        context.contactId
+    ) {
+
+        BX24.callMethod(
+            'crm.contact.get',
+
+            {
+                id:
+                    context.contactId
+            },
+
+            function (result) {
+
+                if (!result.error()) {
+
+                    const contact =
+                        result.data() || {};
+
+
+                    context.assignedById =
+                        normalizePositiveId(
+                            contact.ASSIGNED_BY_ID
+                        );
+
+
+                    context.companyId =
+                        normalizePositiveId(
+                            contact.COMPANY_ID
+                        )
+                        ||
+                        context.companyId;
+
+
+                    if (
+                        !context.clientTitle
+                    ) {
+
+                        context.clientTitle =
+                            [
+                                contact.NAME,
+                                contact.SECOND_NAME,
+                                contact.LAST_NAME
+                            ]
+                            .filter(Boolean)
+                            .join(' ')
+                            .trim();
+                    }
+                }
+
+
+                if (
+                    context.assignedById
+                    ||
+                    !context.companyId
+                ) {
+
+                    callback(
+                        context
+                    );
+
+                    return;
+                }
+
+
+                resolveContextFromCompany(
+                    context,
+                    callback
+                );
+            }
+        );
+
+        return;
+    }
+
+
+    if (
+        context.companyId
+    ) {
+
+        resolveContextFromCompany(
+            context,
+            callback
+        );
+
+        return;
+    }
+
+
+    /*
+     * ASSIGNED_BY_ID можно не передавать:
+     * Битрикс назначит значение по своим
+     * стандартным правилам/текущему пользователю.
+     */
+
+    callback(
+        context
+    );
+}
+
+
+function resolveContextFromCompany(
+    context,
+    callback
+) {
+
+    BX24.callMethod(
+        'crm.company.get',
+
+        {
+            id:
+                context.companyId
+        },
+
+        function (result) {
+
+            if (!result.error()) {
+
+                const company =
+                    result.data() || {};
+
+
+                context.assignedById =
+                    normalizePositiveId(
+                        company.ASSIGNED_BY_ID
+                    );
+
+
+                if (
+                    !context.clientTitle
+                ) {
+
+                    context.clientTitle =
+                        String(
+                            company.TITLE || ''
+                        ).trim();
+                }
+            }
+
+
+            callback(
+                context
+            );
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * НАДЁЖНО ОПРЕДЕЛЯЕМ КЛИЕНТА ПО ТЕЛЕФОНУ
+ * =========================================================
+ */
+
+function ensureClientContextByPhone(
+    context,
+    callback
+) {
+
+    if (!isUsablePhone(phoneNumber)) {
+        callback(context);
+        return;
+    }
+
+    BX24.callMethod(
+        'crm.duplicate.findbycomm',
+        {
+            entity_type: 'CONTACT',
+            type: 'PHONE',
+            values: [phoneNumber]
+        },
+        function (contactResult) {
+
+            if (!contactResult.error()) {
+                const data = contactResult.data() || {};
+                const ids = Array.isArray(data.CONTACT)
+                    ? data.CONTACT
+                    : [];
+
+                if (ids.length > 0) {
+                    context.contactId = Number(ids[0]);
+                }
+            }
+
+            if (context.contactId) {
+                BX24.callMethod(
+                    'crm.contact.get',
+                    { id: context.contactId },
+                    function (result) {
+
+                        if (!result.error()) {
+                            const contact = result.data() || {};
+
+                            context.assignedById = Number(
+                                contact.ASSIGNED_BY_ID
+                                || context.assignedById
+                                || 0
+                            );
+
+                            context.companyId = Number(
+                                contact.COMPANY_ID
+                                || context.companyId
+                                || 0
+                            );
+
+                            const contactName = [
+                                contact.NAME,
+                                contact.SECOND_NAME,
+                                contact.LAST_NAME
+                            ].filter(Boolean).join(' ').trim();
+
+                            if (contactName) {
+                                context.clientTitle = contactName;
+                            }
+                        }
+
+                        callback(context);
+                    }
+                );
+
+                return;
+            }
+
+            BX24.callMethod(
+                'crm.duplicate.findbycomm',
+                {
+                    entity_type: 'COMPANY',
+                    type: 'PHONE',
+                    values: [phoneNumber]
+                },
+                function (companyResult) {
+
+                    if (!companyResult.error()) {
+                        const data = companyResult.data() || {};
+                        const ids = Array.isArray(data.COMPANY)
+                            ? data.COMPANY
+                            : [];
+
+                        if (ids.length > 0) {
+                            context.companyId = Number(ids[0]);
+                        }
+                    }
+
+                    if (context.companyId) {
+                        BX24.callMethod(
+                            'crm.company.get',
+                            { id: context.companyId },
+                            function (result) {
+
+                                if (!result.error()) {
+                                    const company = result.data() || {};
+
+                                    context.assignedById = Number(
+                                        company.ASSIGNED_BY_ID
+                                        || context.assignedById
+                                        || 0
+                                    );
+
+                                    if (company.TITLE) {
+                                        context.clientTitle = String(company.TITLE);
+                                    }
+                                }
+
+                                callback(context);
+                            }
+                        );
+
+                        return;
+                    }
+
+                    createContactForCall(
+                        context,
+                        callback
+                    );
+                }
+            );
+        }
+    );
+}
+
+
+function createContactForCall(
+    context,
+    callback
+) {
+
+    const contactName =
+        String(context.clientTitle || '').trim()
+        || ('Клиент ' + phoneNumber);
+
+    const fields = {
+        NAME: contactName,
+        OPENED: 'Y',
+        PHONE: [
+            {
+                VALUE: phoneNumber,
+                VALUE_TYPE: 'WORK'
+            }
+        ]
+    };
+
+    if (context.assignedById) {
+        fields.ASSIGNED_BY_ID =
+            Number(context.assignedById);
+    }
+
+    BX24.callMethod(
+        'crm.contact.add',
+        { fields: fields },
+        function (result) {
+
+            if (result.error()) {
+                console.warn(
+                    'Не удалось создать контакт:',
+                    result.error(),
+                    result.error_description()
+                );
+
+                callback(context);
+                return;
+            }
+
+            context.contactId =
+                Number(result.data());
+
+            context.clientTitle =
+                contactName;
+
+            callback(context);
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * СОЗДАЁМ ЛИД
+ * =========================================================
+ */
+
+function getLeadStatusIdByName(
+    stageName,
+    callback
+) {
+
+    BX24.callMethod(
+        'crm.status.list',
+
+        {
+            filter: {
+                ENTITY_ID:
+                    'STATUS'
+            },
+
+            order: {
+                SORT:
+                    'ASC'
+            }
+        },
+
+        function (result) {
+
+            if (result.error()) {
+
+                console.warn(
+                    'Не удалось получить стадии лидов:',
+                    result.error(),
+                    result.error_description()
+                );
+
+                callback('');
+                return;
+            }
+
+
+            const statuses =
+                result.data() || [];
+
+
+            const target =
+                statuses.find(
+                    function (status) {
+
+                        return (
+                            normalizeText(
+                                status.NAME
+                            )
+                            ===
+                            normalizeText(
+                                stageName
+                            )
+                        );
+                    }
+                );
+
+
+            if (!target) {
+
+                console.warn(
+                    'Не найдена стадия:',
+                    stageName
+                );
+
+                callback('');
+                return;
+            }
+
+
+            callback(
+                String(
+                    target.STATUS_ID || ''
+                )
+            );
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * СОЗДАЁМ ЛИД
+ * =========================================================
+ */
+
+function createLeadFromContext(
+    context
+) {
+
+    if (leadId) {
+
+        leadCreationInProgress =
+            false;
+
+        return;
+    }
+
+
+    /*
+     * ВАЖНО:
+     * на этом портале STATUS_ID = NEW
+     * НЕ является стадией с названием "Новый".
+     *
+     * Поэтому сначала находим реальный STATUS_ID
+     * стадии по её названию.
+     */
+
+    getLeadStatusIdByName(
+        'Новый',
+
+        function (
+            realNewStatusId
+        ) {
+
+            if (!realNewStatusId) {
+
+                leadCreationInProgress =
+                    false;
+
+
+                showError(
+                    'Не удалось найти стадию «Новый».'
+                );
+
+
+                const button =
+                    document.getElementById(
+                        'createLeadButton'
+                    );
+
+
+                button.disabled =
+                    false;
+
+                button.textContent =
+                    '+ Создать лид';
+
+
+                return;
+            }
+
+
+            console.log(
+                'Реальный STATUS_ID стадии "Новый":',
+                realNewStatusId
+            );
+
+
+            const fields = {
+
+                TITLE:
+                    buildLeadTitle(
+                        context
+                    ),
+
+                /*
+                 * Не используем строку NEW.
+                 * Берём ID именно стадии,
+                 * которая называется "Новый".
+                 */
+                STATUS_ID:
+                    realNewStatusId,
+
+                SOURCE_ID:
+                    'CALL',
+
+                SOURCE_DESCRIPTION:
+                    'Создан менеджером из карточки звонка через приложение. Клиент привязан из карточки звонка.',
+
+                OPENED:
+                    'Y',
+
+                ORIGINATOR_ID:
+                    LEAD_ORIGINATOR_ID,
+
+                ORIGIN_ID:
+                    buildOriginId(
+                        callId
+                    )
+            };
+
+
+            if (
+                context.assignedById
+            ) {
+
+                fields.ASSIGNED_BY_ID =
+                    context.assignedById;
+            }
+
+
+            if (
+                context.contactId
+            ) {
+
+                fields.CONTACT_IDS = [
+                    Number(
+                        context.contactId
+                    )
+                ];
+            }
+
+
+            if (
+                context.companyId
+            ) {
+
+                fields.COMPANY_ID =
+                    Number(
+                        context.companyId
+                    );
+            }
+
+
+            if (
+                isUsablePhone(
+                    phoneNumber
+                )
+            ) {
+
+                fields.PHONE = [
+                    {
+                        VALUE:
+                            phoneNumber,
+
+                        VALUE_TYPE:
+                            'WORK'
+                    }
+                ];
+            }
+
+
+            document.getElementById(
+                'leadInfo'
+            ).textContent =
+                'Создаём лид для текущего звонка...';
+
+
+            BX24.callMethod(
+                'crm.lead.add',
+
+                {
+                    fields:
+                        fields,
+
+                    params: {
+
+                        REGISTER_SONET_EVENT:
+                            'Y'
+                    }
+                },
+
+                function (result) {
+
+                    leadCreationInProgress =
+                        false;
+
+
+                    if (result.error()) {
+
+                        showError(
+                            'Не удалось создать лид: ' +
+                            result.error_description()
+                        );
+
+
+                        document.getElementById(
+                            'leadInfo'
+                        ).textContent =
+                            'Лид не создан.';
+
+
+                        const button =
+                            document.getElementById(
+                                'createLeadButton'
+                            );
+
+
+                        button.disabled =
+                            false;
+
+                        button.textContent =
+                            '+ Создать лид';
+
+
+                        return;
+                    }
+
+
+                    const newLeadId =
+                        normalizePositiveId(
+                            result.data()
+                        );
+
+
+                    if (!newLeadId) {
+
+                        showError(
+                            'Битрикс24 не вернул ID созданного лида.'
+                        );
+
+                        return;
+                    }
+
+
+                    bindClientToLead(
+                        newLeadId,
+                        context,
+
+                        function () {
+
+                            ensureLeadStageNew(
+                                newLeadId,
+
+                                function () {
+
+                                    setLead(
+                                        newLeadId,
+                                        true
+                                    );
+
+
+                                    showSuccess(
+                                        'Лид #' +
+                                        newLeadId +
+                                        ' создан. Клиент привязан. Стадия: «Новый».'
+                                    );
+
+
+                                    showLeadCreatedActions();
+
+
+                                    ensureCallActivityBinding();
+                                }
+                            );
+                        }
+                    );
+                }
+            );
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * ЯВНО ПРИВЯЗЫВАЕМ КЛИЕНТА К ЛИДУ
+ * =========================================================
+ */
+
+function bindClientToLead(
+    newLeadId,
+    context,
+    callback
+) {
+
+    const finish = function () {
+
+        if (context.companyId) {
+            BX24.callMethod(
+                'crm.lead.update',
+                {
+                    id: newLeadId,
+                    fields: {
+                        COMPANY_ID:
+                            Number(context.companyId)
+                    }
+                },
+                function () {
+                    callback();
+                }
+            );
+
+            return;
+        }
+
+        callback();
+    };
+
+
+    if (!context.contactId) {
+        finish();
+        return;
+    }
+
+
+    BX24.callMethod(
+        'crm.lead.contact.add',
+        {
+            id: newLeadId,
+            fields: {
+                CONTACT_ID:
+                    Number(context.contactId),
+
+                SORT:
+                    10,
+
+                IS_PRIMARY:
+                    'Y'
+            }
+        },
+        function (result) {
+
+            if (result.error()) {
+                console.warn(
+                    'crm.lead.contact.add:',
+                    result.error(),
+                    result.error_description()
+                );
+            }
+
+            finish();
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * ФИКСИРУЕМ СТАДИЮ "НОВЫЙ"
+ * =========================================================
+ */
+
+function ensureLeadStageNew(
+    newLeadId,
+    callback
+) {
+
+    getLeadStatusIdByName(
+        'Новый',
+
+        function (
+            realNewStatusId
+        ) {
+
+            if (!realNewStatusId) {
+
+                console.warn(
+                    'Не удалось найти реальный STATUS_ID стадии "Новый"'
+                );
+
+                callback();
+                return;
+            }
+
+
+            BX24.callMethod(
+                'crm.lead.get',
+
+                {
+                    id:
+                        newLeadId
+                },
+
+                function (getResult) {
+
+                    if (getResult.error()) {
+
+                        console.warn(
+                            'Не удалось проверить стадию лида:',
+                            getResult.error(),
+                            getResult.error_description()
+                        );
+
+                        callback();
+                        return;
+                    }
+
+
+                    const leadData =
+                        getResult.data() || {};
+
+
+                    const currentStatusId =
+                        String(
+                            leadData.STATUS_ID || ''
+                        );
+
+
+                    console.log(
+                        'Стадия лида после создания:',
+                        currentStatusId,
+                        'ожидается:',
+                        realNewStatusId
+                    );
+
+
+                    if (
+                        currentStatusId ===
+                        realNewStatusId
+                    ) {
+
+                        callback();
+                        return;
+                    }
+
+
+                    /*
+                     * Если другой механизм успел
+                     * поменять стадию, возвращаем
+                     * именно в реальную стадию "Новый".
+                     */
+
+                    BX24.callMethod(
+                        'crm.lead.update',
+
+                        {
+                            id:
+                                newLeadId,
+
+                            fields: {
+                                STATUS_ID:
+                                    realNewStatusId
+                            }
+                        },
+
+                        function (updateResult) {
+
+                            if (updateResult.error()) {
+
+                                console.warn(
+                                    'Не удалось вернуть лид в "Новый":',
+                                    updateResult.error(),
+                                    updateResult.error_description()
+                                );
+
+                            } else {
+
+                                console.log(
+                                    'Лид возвращён в реальную стадию "Новый":',
+                                    realNewStatusId
+                                );
+                            }
+
+
+                            callback();
+                        }
+                    );
+                }
+            );
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * УСТАНАВЛИВАЕМ ТЕКУЩИЙ ЛИД
+ * =========================================================
+ */
+
+function setLead(
+    id,
+    createdByApp
+) {
+
+    id =
+        normalizePositiveId(
+            id
+        );
+
+
+    if (!id) {
+        return;
+    }
+
+
+    const changed =
+        leadId !== id;
+
+
+    leadId =
+        id;
+
+
+    syncCreateLeadButtonState();
+
+    showLeadCreatedActions();
+
+
+    document.getElementById(
+        'leadInfo'
+    ).className =
+        'info ok';
+
+
+    document.getElementById(
+        'leadInfo'
+    ).textContent =
+        (
+            createdByApp
+            ?
+            'Лид для звонка: #'
+            :
+            'Связанный лид: #'
+        )
+        +
+        leadId;
+
+
+    if (
+        changed
+        ||
+        !callResultFieldCode
+    ) {
+
+        loadLeadInfo();
+
+        loadCallResultField();
+    }
+
+
+    updateSaveAvailability();
+}
+
+
+/*
+ * =========================================================
+ * ИНФОРМАЦИЯ О ЛИДЕ
+ * =========================================================
+ */
+
+function loadLeadInfo() {
+
+    if (!leadId) {
+        return;
+    }
+
+
+    BX24.callMethod(
+        'crm.lead.get',
+
+        {
+            id:
+                leadId
+        },
+
+        function (result) {
+
+            if (result.error()) {
+                return;
+            }
+
+
+            const lead =
+                result.data() || {};
+
+
+            const title =
+                lead.TITLE
+                ?
+                lead.TITLE
+                :
+                'Лид #' + leadId;
+
+
+            document.getElementById(
+                'leadInfo'
+            ).textContent =
+                'Лид: ' +
+                title +
+                ' (#' +
+                leadId +
+                ')';
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * ПРИВЯЗЫВАЕМ CRM-ДЕЛО ЗВОНКА К ЛИДУ
+ * =========================================================
+ */
+
+function ensureCallActivityBinding() {
+
+    if (
+        !leadId
+        ||
+        activityBindingInProgress
+    ) {
+        return;
+    }
+
+
+    /*
+     * Если статус уже показывает нужную
+     * привязку — делать ничего не надо.
+     */
+
+    if (
+        statusAlreadyContainsLeadBinding()
+    ) {
+
+        showBindingSuccess();
+
+        return;
+    }
+
+
+    /*
+     * CRM_ACTIVITY_ID может появиться
+     * не сразу после начала звонка.
+     */
+
+    if (!crmActivityId) {
+
+        document.getElementById(
+            'bindingInfo'
+        ).textContent =
+            'Лид создан. Ожидаем CRM-дело звонка для привязки...';
+
+
+        scheduleActivityBindingRetry();
+
+        return;
+    }
+
+
+    activityBindingInProgress =
+        true;
+
+
+    document.getElementById(
+        'bindingInfo'
+    ).textContent =
+        'Привязываем звонок к лиду #' +
+        leadId +
+        '...';
+
+
+    BX24.callMethod(
+        'crm.activity.binding.add',
+
+        {
+            activityId:
+                crmActivityId,
+
+            /*
+             * entityTypeId = 1 — лид.
+             */
+            entityTypeId:
+                1,
+
+            entityId:
+                leadId
+        },
+
+        function (result) {
+
+            activityBindingInProgress =
+                false;
+
+
+            if (result.error()) {
+
+                /*
+                 * Если связь уже существует,
+                 * это для нас успешный результат.
+                 */
+
+                if (
+                    result.error()
+                    ===
+                    'ACTIVITY_IS_ALREADY_BOUND'
+                ) {
+
+                    showBindingSuccess();
+
+                    return;
+                }
+
+
+                console.warn(
+                    'Ошибка привязки звонка:',
+                    result.error(),
+                    result.error_description()
+                );
+
+
+                document.getElementById(
+                    'bindingInfo'
+                ).textContent =
+                    'Лид создан, но пока не удалось привязать дело звонка. Повторяем...';
+
+
+                scheduleActivityBindingRetry();
+
+                return;
+            }
+
+
+            showBindingSuccess();
+
+
+            /*
+             * Перечитываем статус,
+             * чтобы получить свежие bindings.
+             */
+
+            setTimeout(
+                refreshCallStatus,
+                300
+            );
+        }
+    );
+}
+
+
+function statusAlreadyContainsLeadBinding() {
+
+    const bindings =
+        Array.isArray(
+            callStatusData.CRM_BINDINGS
+        )
+        ?
+        callStatusData.CRM_BINDINGS
+        :
+        [];
+
+
+    return bindings.some(
+        function (binding) {
+
+            return (
+                String(
+                    binding.ENTITY_TYPE || ''
+                ).toUpperCase()
+                ===
+                'LEAD'
+                &&
+                normalizePositiveId(
+                    binding.ENTITY_ID
+                )
+                ===
+                leadId
+            );
+        }
+    );
+}
+
+
+function showBindingSuccess() {
+
+    if (activityRetryTimer) {
+
+        clearTimeout(
+            activityRetryTimer
+        );
+
+        activityRetryTimer =
+            null;
+    }
+
+
+    document.getElementById(
+        'bindingInfo'
+    ).className =
+        'info ok';
+
+
+    document.getElementById(
+        'bindingInfo'
+    ).textContent =
+        'Звонок привязан к лиду #' +
+        leadId +
+        '.';
+}
+
+
+/*
+ * =========================================================
+ * ПОВТОРНАЯ ПОПЫТКА ПОЛУЧИТЬ CRM_ACTIVITY_ID
+ * =========================================================
+ */
+
+function scheduleActivityBindingRetry() {
+
+    if (
+        activityRetryTimer
+        ||
+        activityRetryCount >= 15
+    ) {
+        return;
+    }
+
+
+    activityRetryCount++;
+
+
+    activityRetryTimer =
+        setTimeout(
+            function () {
+
+                activityRetryTimer =
+                    null;
+
+
+                refreshCallStatus();
+
+            },
+            2000
+        );
+}
+
+
+/*
+ * =========================================================
+ * СОСТОЯНИЕ ЗВОНКА
+ * =========================================================
+ */
+
+function handleCallState(
+    callState
+) {
+
+    const statusElement =
+        document.getElementById(
+            'callStatus'
+        );
+
+
+    if (
+        callState ===
+        'connected'
+    ) {
+
+        statusElement.className =
+            'call-status';
+
+        statusElement.textContent =
+            'Разговор идёт. Лид уже создаётся/проверяется. После завершения выберите результат.';
+
+        return;
+    }
+
+
+    if (
+        callState ===
+        'connecting'
+    ) {
+
+        statusElement.className =
+            'call-status';
+
+        statusElement.textContent =
+            'Устанавливается соединение...';
+
+        return;
+    }
+
+
+    if (
+        callState ===
+        'idle'
+    ) {
+
+        statusElement.className =
+            'call-status finished';
+
+        statusElement.textContent =
+            'Звонок завершён. Выберите результат звонка.';
+
+
+        enableResultMode();
+
+        return;
+    }
+
+
+    statusElement.className =
+        'call-status';
+
+    statusElement.textContent =
+        'Ожидаем состояние звонка...';
+}
+
+
+/*
+ * =========================================================
+ * ПОСЛЕ ЗВОНКА ДЕЛАЕМ РЕЗУЛЬТАТ ОБЯЗАТЕЛЬНЫМ
+ * =========================================================
+ */
+
+function enableResultMode() {
+
+    if (
+        resultSaved
+    ) {
+        return;
+    }
+
+
+    resultModeEnabled =
+        true;
+
+
+    document.getElementById(
+        'formWrap'
+    ).classList.add(
+        'visible'
+    );
+
+
+    BX24.resizeWindow(
+        560,
+        690
+    );
+
+
+    blockAutoClose();
+
+
+    if (!keepAliveTimer) {
+
+        keepAliveTimer =
+            setInterval(
+                function () {
+
+                    if (
+                        resultModeEnabled
+                        &&
+                        !resultSaved
+                    ) {
+
+                        blockAutoClose();
+                    }
+
+                },
+                45000
+            );
+    }
+
+
+    updateSaveAvailability();
+}
+
+
+/*
+ * =========================================================
+ * БЛОКИРУЕМ АВТОЗАКРЫТИЕ КАРТОЧКИ
+ * =========================================================
+ */
+
+function blockAutoClose() {
+
+    BX24.placement.call(
+        'disableAutoClose',
+        {},
+        function () {
+
+            console.log(
+                'Автозакрытие карточки звонка заблокировано'
+            );
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * ИЩЕМ ПОЛЕ "РЕЗУЛЬТАТ ЗВОНКА"
+ * =========================================================
+ */
+
+function loadCallResultField() {
+
+    if (
+        callResultFieldCode
+    ) {
+
+        updateSaveAvailability();
+
+        return;
+    }
+
+
+    findCallResultField(
+        0
+    );
+}
+
+
+function findCallResultField(
+    start
+) {
+
+    BX24.callMethod(
+        'crm.lead.userfield.list',
+
+        {
+            order: {
+
+                SORT:
+                    'ASC',
+
+                ID:
+                    'ASC'
+            },
+
+            filter: {
+
+                USER_TYPE_ID:
+                    'enumeration',
+
+                LANG:
+                    'ru'
+            },
+
+            start:
+                start
+        },
+
+        function (result) {
+
+            if (result.error()) {
+
+                showError(
+                    'Не удалось получить пользовательские поля лида: ' +
+                    result.error_description()
+                );
+
+                return;
+            }
+
+
+            const fields =
+                result.data() || [];
+
+
+            const target =
+                fields.find(
+                    function (field) {
+
+                        return isCallResultField(
+                            field
+                        );
+                    }
+                );
+
+
+            if (target) {
+
+                callResultFieldCode =
+                    String(
+                        target.FIELD_NAME || ''
+                    );
+
+
+                callResultFieldId =
+                    normalizePositiveId(
+                        target.ID
+                    );
+
+
+                console.log(
+                    'Поле результата звонка найдено:',
+                    target
+                );
+
+
+                if (
+                    Array.isArray(
+                        target.LIST
+                    )
+                    &&
+                    target.LIST.length
+                ) {
+
+                    fillResultOptions(
+                        target.LIST
+                    );
+
+                    return;
+                }
+
+
+                loadCallResultFieldById();
+
+                return;
+            }
+
+
+            if (
+                typeof result.more ===
+                'function'
+                &&
+                result.more()
+            ) {
+
+                const next =
+                    result.next();
+
+
+                if (
+                    next !== false
+                    &&
+                    next !== null
+                    &&
+                    next !== undefined
+                ) {
+
+                    findCallResultField(
+                        Number(next)
+                    );
+
+                    return;
+                }
+            }
+
+
+            showError(
+                'Не найдено поле списка «' +
+                CALL_RESULT_FIELD_TITLE +
+                '». Проверьте точное название поля.'
+            );
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * ПРОВЕРЯЕМ НАЗВАНИЕ ПОЛЯ
+ * =========================================================
+ */
+
+function isCallResultField(
+    field
+) {
+
+    const expected =
+        normalizeText(
+            CALL_RESULT_FIELD_TITLE
+        );
+
+
+    const labels = [
+
+        field.EDIT_FORM_LABEL,
+        field.LIST_COLUMN_LABEL,
+        field.LIST_FILTER_LABEL,
+        field.LABEL,
+        field.TITLE
+
+    ];
+
+
+    return labels.some(
+        function (label) {
+
+            if (
+                label
+                &&
+                typeof label ===
+                'object'
+            ) {
+
+                label =
+                    label.ru || '';
+            }
+
+
+            return (
+                normalizeText(
+                    label
+                )
+                ===
+                expected
+            );
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * ПОЛУЧАЕМ ВАРИАНТЫ ПОЛЯ
+ * =========================================================
+ */
+
+function loadCallResultFieldById() {
+
+    if (!callResultFieldId) {
+
+        loadCallResultOptionsFallback();
+
+        return;
+    }
+
+
+    BX24.callMethod(
+        'crm.lead.userfield.get',
+
+        {
+            id:
+                callResultFieldId
+        },
+
+        function (result) {
+
+            if (result.error()) {
+
+                loadCallResultOptionsFallback();
+
+                return;
+            }
+
+
+            const field =
+                result.data() || {};
+
+
+            if (
+                Array.isArray(
+                    field.LIST
+                )
+                &&
+                field.LIST.length
+            ) {
+
+                fillResultOptions(
+                    field.LIST
+                );
+
+                return;
+            }
+
+
+            loadCallResultOptionsFallback();
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * РЕЗЕРВНО ПОЛУЧАЕМ ENUM ИЗ crm.lead.fields
+ * =========================================================
+ */
+
+function loadCallResultOptionsFallback() {
+
+    BX24.callMethod(
+        'crm.lead.fields',
+        {},
+
+        function (result) {
+
+            if (result.error()) {
+
+                showError(
+                    'Поле найдено, но не удалось получить варианты списка.'
+                );
+
+                return;
+            }
+
+
+            const fields =
+                result.data() || {};
+
+
+            const field =
+                fields[
+                    callResultFieldCode
+                ];
+
+
+            if (!field) {
+
+                showError(
+                    'Поле «Результат звонка» найдено, но его описание недоступно.'
+                );
+
+                return;
+            }
+
+
+            const options =
+                Array.isArray(
+                    field.items
+                )
+                ?
+                field.items
+                :
+                (
+                    Array.isArray(
+                        field.LIST
+                    )
+                    ?
+                    field.LIST
+                    :
+                    []
+                );
+
+
+            if (!options.length) {
+
+                showError(
+                    'Не удалось получить варианты поля «Результат звонка».'
+                );
+
+                return;
+            }
+
+
+            fillResultOptions(
+                options
+            );
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * ЗАПОЛНЯЕМ СПИСОК РЕЗУЛЬТАТОВ
+ * =========================================================
+ */
+
+function fillResultOptions(
+    items
+) {
+
+    const select =
+        document.getElementById(
+            'callResult'
+        );
+
+
+    select.innerHTML =
+        '';
+
+
+    const placeholder =
+        document.createElement(
+            'option'
+        );
+
+
+    placeholder.value =
+        '';
+
+    placeholder.textContent =
+        'Выберите результат';
+
+
+    select.appendChild(
+        placeholder
+    );
+
+
+    items.forEach(
+        function (item) {
+
+            const value =
+                String(
+                    item.VALUE
+                    ??
+                    item.value
+                    ??
+                    ''
+                )
+                .trim();
+
+
+            const id =
+                String(
+                    item.ID
+                    ??
+                    item.id
+                    ??
+                    ''
+                )
+                .trim();
+
+
+            if (
+                !value
+                ||
+                !id
+            ) {
+                return;
+            }
+
+
+            /*
+             * "не выбрано" в форме
+             * специально не показываем.
+             */
+
+            if (
+                isEmptyResultValue(
+                    value
+                )
+            ) {
+                return;
+            }
+
+
+            const option =
+                document.createElement(
+                    'option'
+                );
+
+
+            option.value =
+                id;
+
+            option.textContent =
+                value;
+
+
+            select.appendChild(
+                option
+            );
+        }
+    );
+
+
+    if (
+        select.options.length <= 1
+    ) {
+
+        showError(
+            'У поля «Результат звонка» нет доступных вариантов.'
+        );
+
+        return;
+    }
+
+
+    select.disabled =
+        false;
+
+
+    updateSaveAvailability();
+}
+
+
+/*
+ * =========================================================
+ * СОХРАНЯЕМ РЕЗУЛЬТАТ В СОЗДАННЫЙ ЛИД
+ * =========================================================
+ */
+
+function saveCallResult() {
+
+    if (
+        currentCallState !==
+        'idle'
+    ) {
+
+        showError(
+            'Результат можно сохранить после завершения звонка.'
+        );
+
+        return;
+    }
+
+
+    if (!leadId) {
+
+        showError(
+            'Лид ещё не создан. Подождите несколько секунд.'
+        );
+
+        refreshCallStatus();
+
+        return;
+    }
+
+
+    if (!callResultFieldCode) {
+
+        showError(
+            'Не удалось определить поле «Результат звонка».'
+        );
+
+        return;
+    }
+
+
+    const select =
+        document.getElementById(
+            'callResult'
+        );
+
+
+    const enumId =
+        String(
+            select.value || ''
+        );
+
+
+    if (!enumId) {
+
+        showError(
+            'Выберите результат звонка.'
+        );
+
+        return;
+    }
+
+
+    const selectedText =
+        select.options[
+            select.selectedIndex
+        ]
+        ?
+        select.options[
+            select.selectedIndex
+        ].textContent
+        :
+        '';
+
+
+    if (
+        isEmptyResultValue(
+            selectedText
+        )
+    ) {
+
+        showError(
+            'Выберите результат звонка.'
+        );
+
+        return;
+    }
+
+
+    setLoading(
+        true
+    );
+
+
+    const fields = {};
+
+
+    fields[
+        callResultFieldCode
+    ] =
+        enumId;
+
+
+    BX24.callMethod(
+        'crm.lead.update',
+
+        {
+            id:
+                leadId,
+
+            fields:
+                fields
+        },
+
+        function (result) {
+
+            if (result.error()) {
+
+                setLoading(
+                    false
+                );
+
+
+                showError(
+                    'Не удалось сохранить результат звонка: ' +
+                    result.error_description()
+                );
+
+                return;
+            }
+
+
+            /*
+             * После сохранения результата
+             * ставим правильную стадию лида.
+             *
+             * Это заодно перекрывает ситуацию,
+             * когда Битрикс сам успел увести
+             * новый лид в "Отказ от покупки".
+             */
+
+            setLeadStageByCallResult(
+                selectedText,
+
+                function (
+                    stageName,
+                    stageWarning
+                ) {
+
+                    resultSaved =
+                        true;
+
+                    resultModeEnabled =
+                        false;
+
+
+                    if (keepAliveTimer) {
+
+                        clearInterval(
+                            keepAliveTimer
+                        );
+
+                        keepAliveTimer =
+                            null;
+                    }
+
+
+                    document.getElementById(
+                        'callResult'
+                    ).disabled =
+                        true;
+
+
+                    setLoading(
+                        false
+                    );
+
+
+                    document.getElementById(
+                        'saveButton'
+                    ).disabled =
+                        true;
+
+
+                    let successText =
+                        'Результат сохранён в лид #' +
+                        leadId +
+                        ': ' +
+                        selectedText;
+
+
+                    if (stageName) {
+
+                        successText +=
+                            '. Стадия: «' +
+                            stageName +
+                            '»';
+                    }
+
+
+                    if (stageWarning) {
+
+                        successText +=
+                            '. ' +
+                            stageWarning;
+                    }
+
+
+                    showSuccess(
+                        successText
+                    );
+
+
+                    /*
+                     * На всякий случай ещё раз
+                     * пытаемся связать дело звонка
+                     * с лидом перед закрытием.
+                     */
+
+                    ensureCallActivityBinding();
+
+
+                    BX24.placement.call(
+                        'enableAutoClose',
+                        {},
+
+                        function () {
+
+                            console.log(
+                                'Автозакрытие карточки звонка снова разрешено'
+                            );
+                        }
+                    );
+                }
+            );
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * СТАДИЯ ЛИДА ПО РЕЗУЛЬТАТУ ЗВОНКА
+ * =========================================================
+ *
+ * Логика:
+ *
+ * Дозвонился...       -> В работе
+ * Отказ               -> Отказ от покупки
+ * Ошибочный номер     -> Ошибочный клиент
+ * Любой другой итог   -> Новый
+ *
+ * ВАЖНО:
+ * "Не дозвонился" содержит слово "дозвонился",
+ * поэтому сначала проверяем исключения, а уже потом
+ * обычный "Дозвонился".
+ */
+
+function setLeadStageByCallResult(
+    resultText,
+    callback
+) {
+
+    const normalized =
+        normalizeCallResultForRouting(
+            resultText
+        );
+
+
+    let targetStageName =
+        'Новый';
+
+
+    /*
+     * 1. Ошибочный номер -> "Ошибочный клиент"
+     */
+
+    if (
+        normalized.includes(
+            'ошибоч'
+        )
+    ) {
+
+        targetStageName =
+            'Ошибочный клиент';
+
+    /*
+     * 2. Отказ -> "Отказ от покупки"
+     */
+
+    } else if (
+        normalized === 'отказ'
+        ||
+        normalized.includes(
+            'отказ от покупки'
+        )
+    ) {
+
+        targetStageName =
+            'Отказ от покупки';
+
+    /*
+     * 3. "Дозвонился..." -> "В работе"
+     *
+     * При этом "Не дозвонился" сюда попасть не должен.
+     */
+
+    } else if (
+        !normalized.includes(
+            'не дозвонился'
+        )
+        &&
+        (
+            normalized === 'дозвонился'
+            ||
+            normalized.startsWith(
+                'дозвонился '
+            )
+            ||
+            normalized.includes(
+                'дозвонился есть интерес'
+            )
+        )
+    ) {
+
+        targetStageName =
+            'В работе';
+
+    /*
+     * 4. Всё остальное -> "Новый"
+     *
+     * Например:
+     * - Не дозвонился
+     * - Перезвонить позже
+     * - Назначена встреча
+     * - Другое
+     */
+    } else {
+
+        targetStageName =
+            'Новый';
+    }
+
+
+    BX24.callMethod(
+        'crm.status.list',
+
+        {
+            filter: {
+                ENTITY_ID:
+                    'STATUS'
+            }
+        },
+
+        function (result) {
+
+            if (result.error()) {
+
+                console.warn(
+                    'Не удалось получить стадии лидов:',
+                    result.error(),
+                    result.error_description()
+                );
+
+
+                callback(
+                    '',
+                    'Не удалось изменить стадию.'
+                );
+
+                return;
+            }
+
+
+            const statuses =
+                result.data() || [];
+
+
+            const target =
+                statuses.find(
+                    function (status) {
+
+                        return (
+                            normalizeText(
+                                status.NAME
+                            )
+                            ===
+                            normalizeText(
+                                targetStageName
+                            )
+                        );
+                    }
+                );
+
+
+            if (!target) {
+
+                console.warn(
+                    'Не найдена стадия:',
+                    targetStageName
+                );
+
+
+                callback(
+                    '',
+                    'Стадия «' +
+                    targetStageName +
+                    '» не найдена.'
+                );
+
+                return;
+            }
+
+
+            const statusId =
+                String(
+                    target.STATUS_ID || ''
+                );
+
+
+            if (!statusId) {
+
+                callback(
+                    '',
+                    'У стадии «' +
+                    targetStageName +
+                    '» нет STATUS_ID.'
+                );
+
+                return;
+            }
+
+
+            updateLeadStageAndVerify(
+                statusId,
+                targetStageName,
+                callback
+            );
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * СТАВИМ СТАДИЮ И ПРОВЕРЯЕМ, ЧТО ОНА НЕ УЛЕТЕЛА ОБРАТНО
+ * =========================================================
+ */
+
+function updateLeadStageAndVerify(
+    statusId,
+    stageName,
+    callback
+) {
+
+    BX24.callMethod(
+        'crm.lead.update',
+
+        {
+            id:
+                leadId,
+
+            fields: {
+                STATUS_ID:
+                    statusId
+            }
+        },
+
+        function (updateResult) {
+
+            if (updateResult.error()) {
+
+                console.warn(
+                    'Ошибка смены стадии:',
+                    updateResult.error(),
+                    updateResult.error_description()
+                );
+
+
+                callback(
+                    '',
+                    'Не удалось поставить стадию «' +
+                    stageName +
+                    '».'
+                );
+
+                return;
+            }
+
+
+            /*
+             * Через небольшую паузу проверяем:
+             * если внешний механизм Битрикса
+             * снова перекинул лид в "Отказ",
+             * возвращаем нужную стадию ещё раз.
+             */
+
+            setTimeout(
+                function () {
+
+                    BX24.callMethod(
+                        'crm.lead.get',
+
+                        {
+                            id:
+                                leadId
+                        },
+
+                        function (getResult) {
+
+                            if (getResult.error()) {
+
+                                callback(
+                                    stageName,
+                                    ''
+                                );
+
+                                return;
+                            }
+
+
+                            const leadData =
+                                getResult.data() || {};
+
+
+                            const currentStatusId =
+                                String(
+                                    leadData.STATUS_ID || ''
+                                );
+
+
+                            if (
+                                currentStatusId ===
+                                String(statusId)
+                            ) {
+
+                                callback(
+                                    stageName,
+                                    ''
+                                );
+
+                                return;
+                            }
+
+
+                            console.warn(
+                                'Стадия была изменена после сохранения.',
+                                'Ожидалась:',
+                                statusId,
+                                'Фактически:',
+                                currentStatusId
+                            );
+
+
+                            /*
+                             * Одна повторная попытка.
+                             * В бесконечный цикл не уходим.
+                             */
+
+                            BX24.callMethod(
+                                'crm.lead.update',
+
+                                {
+                                    id:
+                                        leadId,
+
+                                    fields: {
+                                        STATUS_ID:
+                                            statusId
+                                    }
+                                },
+
+                                function (
+                                    retryResult
+                                ) {
+
+                                    if (
+                                        retryResult.error()
+                                    ) {
+
+                                        callback(
+                                            stageName,
+                                            'Внешняя автоматизация снова изменила стадию.'
+                                        );
+
+                                        return;
+                                    }
+
+
+                                    callback(
+                                        stageName,
+                                        'Стадия была автоматически изменена Битрикс24 и возвращена приложением.'
+                                    );
+                                }
+                            );
+                        }
+                    );
+                },
+                1200
+            );
+        }
+    );
+}
+
+
+/*
+ * =========================================================
+ * НОРМАЛИЗАЦИЯ РЕЗУЛЬТАТА ДЛЯ МАРШРУТИЗАЦИИ
+ * =========================================================
+ */
+
+function normalizeCallResultForRouting(
+    value
+) {
+
+    return String(
+        value || ''
+    )
+    .trim()
+    .toLowerCase()
+    .replace(
+        /ё/g,
+        'е'
+    )
+    .replace(
+        /[—–-]+/g,
+        ' '
+    )
+    .replace(
+        /\s+/g,
+        ' '
+    );
+}
+
+
+/*
+ * =========================================================
+ * ДОСТУПНОСТЬ КНОПКИ
+ * =========================================================
+ */
+
+function updateSaveAvailability() {
+
+    const button =
+        document.getElementById(
+            'saveButton'
+        );
+
+
+    const select =
+        document.getElementById(
+            'callResult'
+        );
+
+
+    button.disabled =
+        !(
+            currentCallState ===
+                'idle'
+            &&
+            leadId > 0
+            &&
+            callResultFieldCode
+            &&
+            !select.disabled
+            &&
+            !resultSaved
+        );
+}
+
+
+/*
+ * =========================================================
+ * ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+ * =========================================================
+ */
+
+function buildLeadTitle(
+    context
+) {
+
+    const client =
+        String(
+            context.clientTitle || ''
+        ).trim();
+
+
+    if (client) {
+
+        return (
+            'Звонок — ' +
+            client
+        );
+    }
+
+
+    if (
+        isUsablePhone(
+            phoneNumber
+        )
+    ) {
+
+        return (
+            'Звонок — ' +
+            phoneNumber
+        );
+    }
+
+
+    return 'Звонок — новый лид';
+}
+
+
+function buildOriginId(
+    id
+) {
+
+    return (
+        'CALL_' +
+        String(
+            id || ''
+        )
+    )
+    .slice(
+        0,
+        250
+    );
+}
+
+
+function normalizePositiveId(
+    value
+) {
+
+    const id =
+        Number(
+            value
+        );
+
+
+    return (
+        Number.isFinite(id)
+        &&
+        id > 0
+    )
+    ?
+    Math.trunc(id)
+    :
+    0;
+}
+
+
+function isUsablePhone(
+    value
+) {
+
+    const phone =
+        String(
+            value || ''
+        )
+        .trim()
+        .toLowerCase();
+
+
+    return (
+        phone !== ''
+        &&
+        phone !== 'hidden'
+        &&
+        phone !== 'unknown'
+        &&
+        phone !== 'undefined'
+    );
+}
+
+
+function normalizeText(
+    value
+) {
+
+    return String(
+        value || ''
+    )
+    .trim()
+    .toLowerCase()
+    .replace(
+        /\s+/g,
+        ' '
+    );
+}
+
+
+function isEmptyResultValue(
+    value
+) {
+
+    const normalized =
+        normalizeText(
+            value
+        );
+
+
+    return (
+        normalized ===
+            'не выбрано'
+        ||
+        normalized ===
+            'не выбран'
+        ||
+        normalized ===
+            'не выбрано.'
+    );
+}
+
+
+function setLoading(
+    loading
+) {
+
+    const button =
+        document.getElementById(
+            'saveButton'
+        );
+
+
+    button.disabled =
+        loading;
+
+
+    button.textContent =
+        loading
+        ?
+        'Сохраняю...'
+        :
+        'Сохранить результат';
+}
+
+
+function showError(
+    text
+) {
+
+    const message =
+        document.getElementById(
+            'message'
+        );
+
+
+    message.className =
+        'message error';
+
+
+    message.textContent =
+        text;
+}
+
+
+function showSuccess(
+    text
+) {
+
+    const message =
+        document.getElementById(
+            'message'
+        );
+
+
+    message.className =
+        'message success';
+
+
+    message.textContent =
+        text;
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,3074 @@
+<!doctype html>
+<html lang="ru">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>
+        Коммерческое предложение
+    </title>
+
+    <!-- Bitrix24 -->
+    <script src="https://api.bitrix24.com/api/v1/"></script>
+
+    <!-- PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/vfs_fonts.js"></script>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background: #f5f7f8;
+            color: #333;
+        }
+
+        .form-card {
+            max-width: 760px;
+            margin: 0 auto;
+
+            padding: 25px;
+
+            background: #fff;
+
+            border-radius: 12px;
+
+            box-shadow:
+                0 3px 15px
+                rgba(0, 0, 0, .08);
+        }
+
+        h1 {
+            margin: 0 0 5px;
+            font-size: 24px;
+        }
+
+        .subtitle {
+            margin-bottom: 20px;
+
+            color: #777;
+            font-size: 14px;
+        }
+
+        .lead-info {
+            margin-bottom: 20px;
+            padding: 11px 13px;
+
+            background: #f6f8f9;
+
+            border-radius: 7px;
+
+            color: #555;
+            font-size: 13px;
+        }
+
+        .form-group {
+            margin-bottom: 17px;
+        }
+
+        .row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .row .form-group {
+            flex: 1;
+        }
+
+        label {
+            display: block;
+
+            margin-bottom: 7px;
+
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+
+            padding: 11px 12px;
+
+            border: 1px solid #c6cdd3;
+            border-radius: 6px;
+
+            background: white;
+
+            outline: none;
+
+            font-size: 15px;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: #2fc6f6;
+        }
+
+        textarea {
+            min-height: 95px;
+            resize: vertical;
+        }
+
+        .responsible-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .responsible-row input {
+            flex: 1;
+        }
+
+        button {
+            border: none;
+            border-radius: 6px;
+
+            cursor: pointer;
+        }
+
+        .select-user {
+            padding: 0 18px;
+
+            background: #eef2f4;
+            color: #333;
+        }
+
+        .select-user:hover {
+            background: #e2e7ea;
+        }
+
+        .total-box {
+            margin: 20px 0;
+            padding: 17px;
+
+            border-radius: 8px;
+
+            background: #eef9fd;
+        }
+
+        .total-label {
+            color: #777;
+            font-size: 13px;
+        }
+
+        .total-value {
+            margin-top: 5px;
+
+            font-size: 25px;
+            font-weight: bold;
+
+            color: #1e8fb8;
+        }
+
+        .submit {
+            width: 100%;
+
+            padding: 14px;
+
+            background: #2fc6f6;
+
+            color: white;
+
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .submit:hover {
+            background: #22b9e8;
+        }
+
+        .submit:disabled {
+            opacity: .6;
+            cursor: default;
+        }
+
+        .progress {
+            display: none;
+
+            margin-top: 15px;
+            padding: 12px;
+
+            background: #eef9fd;
+
+            border-radius: 6px;
+
+            color: #287b98;
+
+            font-size: 14px;
+        }
+
+        .message {
+            display: none;
+
+            margin-top: 15px;
+            padding: 12px;
+
+            border-radius: 6px;
+        }
+
+        .message.success {
+            display: block;
+
+            background: #e7f7ec;
+            color: #24743a;
+        }
+
+        .message.error {
+            display: block;
+
+            background: #fdeaea;
+            color: #b93030;
+        }
+
+        @media (max-width: 600px) {
+
+            .row {
+                display: block;
+            }
+
+            .responsible-row {
+                display: block;
+            }
+
+            .select-user {
+                width: 100%;
+                margin-top: 8px;
+                padding: 11px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+
+<div class="form-card">
+
+    <h1>
+        Коммерческое предложение
+    </h1>
+
+    <div class="subtitle">
+        Создание КП и PDF для клиента
+    </div>
+
+
+    <div
+        class="lead-info"
+        id="leadInfo"
+    >
+        Загрузка данных лида...
+    </div>
+
+
+    <input
+        type="hidden"
+        id="lead_id"
+        value="0"
+    >
+
+
+    <!-- АВТОМОБИЛЬ -->
+
+    <div class="form-group">
+
+        <label for="product">
+            Автомобиль / предмет предложения
+        </label>
+
+        <input
+            type="text"
+            id="product"
+            placeholder="Например: Chery Tiggo 7 Pro Max"
+        >
+
+    </div>
+
+
+    <!-- ЦЕНА И СКИДКА -->
+
+    <div class="row">
+
+        <div class="form-group">
+
+            <label for="price">
+                Стоимость, ₽
+            </label>
+
+            <input
+                type="number"
+                id="price"
+                min="0"
+                step="1000"
+                placeholder="3190000"
+                oninput="calculateTotal()"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label for="discount">
+                Скидка, ₽
+            </label>
+
+            <input
+                type="number"
+                id="discount"
+                min="0"
+                step="1000"
+                value="0"
+                oninput="calculateTotal()"
+            >
+
+        </div>
+
+    </div>
+
+
+    <!-- ИТОГО -->
+
+    <div class="total-box">
+
+        <div class="total-label">
+            Итоговая стоимость
+        </div>
+
+        <div
+            class="total-value"
+            id="totalPrice"
+        >
+            0 ₽
+        </div>
+
+    </div>
+
+
+    <!-- ПОКУПКА / СТАТУС -->
+
+    <div class="row">
+
+        <div class="form-group">
+
+            <label for="purchaseType">
+                Способ покупки
+            </label>
+
+            <select id="purchaseType">
+
+                <option value="Не определён">
+                    Не определён
+                </option>
+
+                <option value="Полная оплата">
+                    Полная оплата
+                </option>
+
+                <option value="Кредит">
+                    Кредит
+                </option>
+
+                <option value="Лизинг">
+                    Лизинг
+                </option>
+
+                <option value="Trade-in">
+                    Trade-in
+                </option>
+
+                <option value="Кредит + Trade-in">
+                    Кредит + Trade-in
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label for="offerStatus">
+                Статус КП
+            </label>
+
+            <select id="offerStatus">
+
+                <option value="Подготовлено">
+                    Подготовлено
+                </option>
+
+                <option
+                    value="Отправлено клиенту"
+                    selected
+                >
+                    Отправлено клиенту
+                </option>
+
+            </select>
+
+        </div>
+
+    </div>
+
+
+    <!-- ДАТА -->
+
+    <div class="form-group">
+
+        <label for="validUntil">
+            Предложение действует до
+        </label>
+
+        <input
+            type="date"
+            id="validUntil"
+        >
+
+    </div>
+
+
+    <!-- ОТВЕТСТВЕННЫЙ -->
+
+    <div class="form-group">
+
+        <label>
+            Ответственный
+        </label>
+
+        <div class="responsible-row">
+
+            <input
+                type="text"
+                id="responsible_name"
+                readonly
+                placeholder="Выберите сотрудника"
+            >
+
+            <input
+                type="hidden"
+                id="responsible_id"
+            >
+
+            <button
+                type="button"
+                class="select-user"
+                onclick="selectResponsible()"
+            >
+                Выбрать
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- КОММЕНТАРИЙ -->
+
+    <div class="form-group">
+
+        <label for="comment">
+            Дополнительные условия
+        </label>
+
+        <textarea
+            id="comment"
+            placeholder="Комплектация, наличие, выгоды, дополнительное оборудование, условия кредита, Trade-in и т.д."
+        ></textarea>
+
+    </div>
+
+
+    <button
+        type="button"
+        class="submit"
+        id="createButton"
+        onclick="createOffer()"
+    >
+        Создать КП + PDF
+    </button>
+
+
+    <div
+        class="progress"
+        id="progress"
+    ></div>
+
+
+    <div
+        class="message"
+        id="message"
+    ></div>
+
+</div>
+
+
+<script>
+
+/*
+ * ========================================
+ * НАСТРОЙКИ
+ * ========================================
+ */
+
+const NEGOTIATIONS_STAGE_NAME =
+    'Ведутся переговоры';
+
+
+const STAGES_ALLOWED_TO_MOVE = [
+    'Новый',
+    'Брошенный',
+    'В работе'
+];
+
+
+let lead = null;
+
+
+/*
+ * ========================================
+ * ИНИЦИАЛИЗАЦИЯ
+ * ========================================
+ */
+
+BX24.init(function () {
+
+    BX24.resizeWindow(
+        820,
+        850
+    );
+
+    var placementInfo =
+        BX24.placement.info();
+
+    var placementOptions =
+        placementInfo
+        &&
+        placementInfo.options
+        ?
+        placementInfo.options
+        :
+        {};
+
+    document.getElementById(
+        'lead_id'
+    ).value =
+        Number(
+            placementOptions.ID
+            ||
+            placementOptions.ENTITY_ID
+            ||
+            0
+        );
+
+    setDefaultValidUntil();
+
+    calculateTotal();
+
+    loadLead();
+
+});
+
+
+/*
+ * ========================================
+ * REST PROMISE
+ * ========================================
+ */
+
+function callBitrix(
+    method,
+    params = {}
+) {
+
+    return new Promise(
+        function(resolve, reject) {
+
+            BX24.callMethod(
+                method,
+                params,
+
+                function(result) {
+
+                    if (result.error()) {
+
+                        reject(
+                            new Error(
+                                result.error()
+                                +
+                                ': '
+                                +
+                                result.error_description()
+                            )
+                        );
+
+                        return;
+                    }
+
+                    resolve(
+                        result.data()
+                    );
+                }
+            );
+        }
+    );
+}
+
+
+/*
+ * ========================================
+ * ДАТА ПО УМОЛЧАНИЮ
+ * + 7 ДНЕЙ
+ * ========================================
+ */
+
+function setDefaultValidUntil() {
+
+    const date =
+        new Date();
+
+    date.setDate(
+        date.getDate() + 7
+    );
+
+    document
+        .getElementById(
+            'validUntil'
+        )
+        .value =
+            toInputDate(date);
+}
+
+
+function toInputDate(date) {
+
+    const year =
+        date.getFullYear();
+
+    const month =
+        String(
+            date.getMonth() + 1
+        ).padStart(2, '0');
+
+    const day =
+        String(
+            date.getDate()
+        ).padStart(2, '0');
+
+    return (
+        year +
+        '-' +
+        month +
+        '-' +
+        day
+    );
+}
+
+
+/*
+ * ========================================
+ * ЗАГРУЖАЕМ ЛИД
+ * ========================================
+ */
+
+function loadLead() {
+
+    const leadId =
+        Number(
+            document
+                .getElementById(
+                    'lead_id'
+                )
+                .value
+        );
+
+
+    if (!leadId) {
+
+        showError(
+            'Битрикс24 не передал ID лида'
+        );
+
+        return;
+    }
+
+
+    BX24.callMethod(
+        'crm.lead.get',
+
+        {
+            id:
+                leadId
+        },
+
+        function(result) {
+
+            if (result.error()) {
+
+                showError(
+                    'Ошибка получения лида: '
+                    +
+                    result.error_description()
+                );
+
+                return;
+            }
+
+
+            lead =
+                result.data();
+
+
+            document
+                .getElementById(
+                    'leadInfo'
+                )
+                .textContent =
+                    'Лид: '
+                    +
+                    (
+                        lead.TITLE
+                        ||
+                        'Лид #' + leadId
+                    );
+
+
+            /*
+             * Ответственный за лид
+             * автоматически становится
+             * ответственным за КП.
+             */
+
+            if (
+                lead.ASSIGNED_BY_ID
+            ) {
+
+                document
+                    .getElementById(
+                        'responsible_id'
+                    )
+                    .value =
+                        lead.ASSIGNED_BY_ID;
+
+
+                loadResponsibleName(
+                    lead.ASSIGNED_BY_ID
+                );
+            }
+        }
+    );
+}
+
+
+/*
+ * ========================================
+ * ИМЯ ОТВЕТСТВЕННОГО
+ * ========================================
+ */
+
+function loadResponsibleName(
+    userId
+) {
+
+    BX24.callMethod(
+        'user.get',
+
+        {
+            ID:
+                userId
+        },
+
+        function(result) {
+
+            if (
+                result.error()
+            ) {
+
+                console.error(
+                    result.error()
+                );
+
+                return;
+            }
+
+
+            const users =
+                result.data();
+
+
+            if (
+                !users
+                ||
+                users.length === 0
+            ) {
+
+                return;
+            }
+
+
+            const user =
+                users[0];
+
+
+            const name =
+                [
+                    user.LAST_NAME,
+                    user.NAME,
+                    user.SECOND_NAME
+                ]
+                .filter(Boolean)
+                .join(' ');
+
+
+            document
+                .getElementById(
+                    'responsible_name'
+                )
+                .value =
+                    name;
+        }
+    );
+}
+
+
+/*
+ * ========================================
+ * РОДНОЙ ВЫБОР СОТРУДНИКА
+ * ========================================
+ */
+
+function selectResponsible() {
+
+    BX24.selectUser(
+        function(user) {
+
+            if (!user) {
+                return;
+            }
+
+
+            document
+                .getElementById(
+                    'responsible_id'
+                )
+                .value =
+                    user.id;
+
+
+            document
+                .getElementById(
+                    'responsible_name'
+                )
+                .value =
+                    user.name;
+        }
+    );
+}
+
+
+/*
+ * ========================================
+ * РАСЧЁТ ИТОГО
+ * ========================================
+ */
+
+function calculateTotal() {
+
+    const price =
+        Number(
+            document
+                .getElementById(
+                    'price'
+                )
+                .value
+        )
+        ||
+        0;
+
+
+    const discount =
+        Number(
+            document
+                .getElementById(
+                    'discount'
+                )
+                .value
+        )
+        ||
+        0;
+
+
+    const total =
+        Math.max(
+            0,
+            price - discount
+        );
+
+
+    document
+        .getElementById(
+            'totalPrice'
+        )
+        .textContent =
+            formatMoney(
+                total
+            );
+}
+
+
+/*
+ * ========================================
+ * ИМЯ КЛИЕНТА
+ * ========================================
+ */
+
+function getLeadClientName() {
+
+    if (!lead) {
+        return 'Клиент';
+    }
+
+
+    const personName =
+        [
+            lead.LAST_NAME,
+            lead.NAME,
+            lead.SECOND_NAME
+        ]
+        .filter(Boolean)
+        .join(' ');
+
+
+    if (personName) {
+        return personName;
+    }
+
+
+    if (
+        lead.COMPANY_TITLE
+    ) {
+
+        return lead.COMPANY_TITLE;
+    }
+
+
+    if (
+        lead.TITLE
+    ) {
+
+        return lead.TITLE;
+    }
+
+
+    return (
+        'Лид #' +
+        lead.ID
+    );
+}
+
+
+/*
+ * ========================================
+ * ТЕЛЕФОН КЛИЕНТА
+ * ========================================
+ */
+
+function getLeadPhone() {
+
+    if (
+        lead
+        &&
+        Array.isArray(
+            lead.PHONE
+        )
+        &&
+        lead.PHONE.length > 0
+    ) {
+
+        return (
+            lead.PHONE[0].VALUE
+            ||
+            ''
+        );
+    }
+
+    return '';
+}
+
+
+/*
+ * ========================================
+ * PDF
+ * ========================================
+ */
+
+function createPdfDefinition(
+    data
+) {
+
+    const clientRows = [
+
+        {
+            text:
+                'Клиент: '
+                +
+                data.clientName,
+
+            margin:
+                [0, 0, 0, 4]
+        }
+
+    ];
+
+
+    if (
+        data.clientPhone
+    ) {
+
+        clientRows.push(
+            {
+                text:
+                    'Телефон: '
+                    +
+                    data.clientPhone
+            }
+        );
+    }
+
+
+    const content = [
+
+        {
+            text:
+                'КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ',
+
+            fontSize:
+                20,
+
+            bold:
+                true,
+
+            alignment:
+                'center',
+
+            margin:
+                [0, 0, 0, 8]
+        },
+
+
+        {
+            text:
+                data.offerNumber,
+
+            alignment:
+                'center',
+
+            color:
+                '#666666',
+
+            margin:
+                [0, 0, 0, 25]
+        },
+
+
+        {
+            columns: [
+
+                {
+                    width:
+                        '*',
+
+                    stack:
+                        clientRows
+                },
+
+
+                {
+                    width:
+                        '*',
+
+                    stack: [
+
+                        {
+                            text:
+                                'Ответственный',
+
+                            bold:
+                                true,
+
+                            color:
+                                '#777777'
+                        },
+
+                        {
+                            text:
+                                data.responsibleName,
+
+                            margin:
+                                [0, 4, 0, 0]
+                        }
+
+                    ]
+                }
+
+            ],
+
+            margin:
+                [0, 0, 0, 25]
+        },
+
+
+        {
+            text:
+                'Предложение',
+
+            fontSize:
+                15,
+
+            bold:
+                true,
+
+            margin:
+                [0, 0, 0, 10]
+        },
+
+
+        {
+            table: {
+
+                widths: [
+                    165,
+                    '*'
+                ],
+
+                body: [
+
+                    [
+                        {
+                            text:
+                                'Автомобиль',
+
+                            bold:
+                                true
+                        },
+
+                        data.product
+                    ],
+
+
+                    [
+                        {
+                            text:
+                                'Стоимость',
+
+                            bold:
+                                true
+                        },
+
+                        formatMoney(
+                            data.price
+                        )
+                    ],
+
+
+                    [
+                        {
+                            text:
+                                'Скидка',
+
+                            bold:
+                                true
+                        },
+
+                        formatMoney(
+                            data.discount
+                        )
+                    ],
+
+
+                    [
+                        {
+                            text:
+                                'Итоговая стоимость',
+
+                            bold:
+                                true
+                        },
+
+                        {
+                            text:
+                                formatMoney(
+                                    data.total
+                                ),
+
+                            bold:
+                                true
+                        }
+                    ],
+
+
+                    [
+                        {
+                            text:
+                                'Способ покупки',
+
+                            bold:
+                                true
+                        },
+
+                        data.purchaseType
+                    ],
+
+
+                    [
+                        {
+                            text:
+                                'Действует до',
+
+                            bold:
+                                true
+                        },
+
+                        formatDate(
+                            data.deadline
+                        )
+                    ]
+
+                ]
+            },
+
+            layout:
+                'lightHorizontalLines',
+
+            margin:
+                [0, 0, 0, 25]
+        }
+
+    ];
+
+
+    if (
+        data.comment
+    ) {
+
+        content.push(
+            {
+
+                stack: [
+
+                    {
+                        text:
+                            'Дополнительные условия',
+
+                        fontSize:
+                            14,
+
+                        bold:
+                            true,
+
+                        margin:
+                            [0, 0, 0, 7]
+                    },
+
+                    {
+                        text:
+                            data.comment,
+
+                        lineHeight:
+                            1.3
+                    }
+
+                ],
+
+                margin:
+                    [0, 0, 0, 25]
+            }
+        );
+    }
+
+
+    content.push(
+        {
+
+            text:
+                'Предложение действительно до '
+                +
+                formatDate(
+                    data.deadline
+                )
+                +
+                '.',
+
+            italics:
+                true,
+
+            color:
+                '#666666',
+
+            margin:
+                [0, 15, 0, 0]
+        }
+    );
+
+
+    return {
+
+        pageSize:
+            'A4',
+
+        pageMargins:
+            [
+                50,
+                50,
+                50,
+                60
+            ],
+
+        defaultStyle: {
+
+            font:
+                'Roboto',
+
+            fontSize:
+                11
+        },
+
+        content:
+            content,
+
+
+        footer:
+            function(
+                currentPage,
+                pageCount
+            ) {
+
+                return {
+
+                    text:
+                        'Коммерческое предложение • '
+                        +
+                        currentPage
+                        +
+                        ' / '
+                        +
+                        pageCount,
+
+                    alignment:
+                        'center',
+
+                    color:
+                        '#999999',
+
+                    fontSize:
+                        9
+                };
+            }
+    };
+}
+
+
+/*
+ * ========================================
+ * PDF -> BASE64
+ * ========================================
+ */
+
+function generatePdfBase64(
+    data
+) {
+
+    return new Promise(
+        function(
+            resolve,
+            reject
+        ) {
+
+            try {
+
+                if (
+                    typeof pdfMake
+                    ===
+                    'undefined'
+                ) {
+
+                    reject(
+                        new Error(
+                            'Библиотека PDF не загрузилась'
+                        )
+                    );
+
+                    return;
+                }
+
+
+                const definition =
+                    createPdfDefinition(
+                        data
+                    );
+
+
+                pdfMake
+                    .createPdf(
+                        definition
+                    )
+                    .getBase64(
+                        function(
+                            base64
+                        ) {
+
+                            resolve(
+                                base64
+                            );
+                        }
+                    );
+
+            } catch (
+                error
+            ) {
+
+                reject(
+                    error
+                );
+            }
+        }
+    );
+}
+
+
+/*
+ * ========================================
+ * ТЕКУЩИЙ ПОЛЬЗОВАТЕЛЬ
+ * ========================================
+ */
+
+async function getCurrentUserId() {
+
+    try {
+
+        const auth =
+            BX24.getAuth
+            ?
+            BX24.getAuth()
+            :
+            null;
+
+
+        if (
+            auth
+            &&
+            auth.user_id
+        ) {
+
+            return Number(
+                auth.user_id
+            );
+        }
+
+    } catch (e) {
+
+        console.log(
+            'getAuth:',
+            e
+        );
+    }
+
+
+    const user =
+        await callBitrix(
+            'user.current'
+        );
+
+
+    if (
+        !user
+        ||
+        !user.ID
+    ) {
+
+        throw new Error(
+            'Не удалось определить текущего пользователя'
+        );
+    }
+
+
+    return Number(
+        user.ID
+    );
+}
+
+
+/*
+ * ========================================
+ * НАХОДИМ ДИСК ТЕКУЩЕГО МЕНЕДЖЕРА
+ * ========================================
+ */
+
+async function getUserStorage() {
+
+    const userId =
+        await getCurrentUserId();
+
+
+    let storages = [];
+
+
+    try {
+
+        storages =
+            await callBitrix(
+                'disk.storage.getList',
+
+                {
+                    filter: {
+
+                        ENTITY_TYPE:
+                            'user',
+
+                        ENTITY_ID:
+                            String(
+                                userId
+                            )
+                    }
+                }
+            );
+
+    } catch (e) {
+
+        console.log(
+            'Поиск личного диска:',
+            e
+        );
+    }
+
+
+    /*
+     * Если фильтр конкретного пользователя
+     * ничего не вернул — получаем все
+     * доступные пользовательские диски.
+     */
+
+    if (
+        !Array.isArray(
+            storages
+        )
+        ||
+        storages.length === 0
+    ) {
+
+        storages =
+            await callBitrix(
+                'disk.storage.getList',
+
+                {
+                    filter: {
+
+                        ENTITY_TYPE:
+                            'user'
+                    }
+                }
+            );
+    }
+
+
+    if (
+        !Array.isArray(
+            storages
+        )
+        ||
+        storages.length === 0
+    ) {
+
+        throw new Error(
+            'Не найден доступный Диск Битрикс24'
+        );
+    }
+
+
+    const ownStorage =
+        storages.find(
+            function(storage) {
+
+                return (
+                    String(
+                        storage.ENTITY_ID
+                    )
+                    ===
+                    String(
+                        userId
+                    )
+                );
+            }
+        );
+
+
+    return (
+        ownStorage
+        ||
+        storages[0]
+    );
+}
+
+
+/*
+ * ========================================
+ * ПОЛУЧАЕМ ПРАВО "ЧТЕНИЕ"
+ * ========================================
+ */
+
+async function getReadTaskId() {
+
+    try {
+
+        const tasks =
+            await callBitrix(
+                'disk.rights.getTasks'
+            );
+
+
+        if (
+            !Array.isArray(
+                tasks
+            )
+        ) {
+
+            return null;
+        }
+
+
+        const readTask =
+            tasks.find(
+                function(task) {
+
+                    return (
+                        task.NAME
+                        ===
+                        'disk_access_read'
+                    );
+                }
+            );
+
+
+        return (
+            readTask
+            ?
+            Number(
+                readTask.ID
+            )
+            :
+            null
+        );
+
+    } catch (e) {
+
+        console.log(
+            'Не удалось получить права Диска:',
+            e
+        );
+
+
+        return null;
+    }
+}
+
+
+/*
+ * ========================================
+ * ЗАГРУЖАЕМ PDF В БИТРИКС24
+ * ========================================
+ */
+
+async function uploadPdfToBitrix(
+    base64,
+    fileName
+) {
+
+    const storage =
+        await getUserStorage();
+
+
+    if (
+        !storage
+        ||
+        !storage.ID
+    ) {
+
+        throw new Error(
+            'Не удалось определить хранилище Диска'
+        );
+    }
+
+
+    const readTaskId =
+        await getReadTaskId();
+
+
+    const params = {
+
+        id:
+            Number(
+                storage.ID
+            ),
+
+        data: {
+
+            NAME:
+                fileName
+        },
+
+        fileContent: [
+
+            fileName,
+            base64
+
+        ],
+
+        generateUniqueName:
+            true
+    };
+
+
+    /*
+     * Даем сотрудникам портала
+     * право чтения файла.
+     */
+
+    if (
+        readTaskId
+    ) {
+
+        params.rights = [
+
+            {
+                TASK_ID:
+                    readTaskId,
+
+                ACCESS_CODE:
+                    '*'
+            }
+
+        ];
+    }
+
+
+    const file =
+        await callBitrix(
+            'disk.storage.uploadFile',
+            params
+        );
+
+
+    if (
+        !file
+        ||
+        !file.ID
+    ) {
+
+        throw new Error(
+            'Битрикс24 не вернул ID созданного PDF'
+        );
+    }
+
+
+    return file;
+}
+
+
+/*
+ * ========================================
+ * СОЗДАЁМ КП
+ * ========================================
+ */
+
+async function createOffer() {
+
+    try {
+
+        hideMessage();
+
+
+        const leadId =
+            Number(
+                document
+                    .getElementById(
+                        'lead_id'
+                    )
+                    .value
+            );
+
+
+        const product =
+            document
+                .getElementById(
+                    'product'
+                )
+                .value
+                .trim();
+
+
+        const price =
+            Number(
+                document
+                    .getElementById(
+                        'price'
+                    )
+                    .value
+            );
+
+
+        const discount =
+            Number(
+                document
+                    .getElementById(
+                        'discount'
+                    )
+                    .value
+            )
+            ||
+            0;
+
+
+        const total =
+            Math.max(
+                0,
+                price - discount
+            );
+
+
+        const purchaseType =
+            document
+                .getElementById(
+                    'purchaseType'
+                )
+                .value;
+
+
+        const offerStatus =
+            document
+                .getElementById(
+                    'offerStatus'
+                )
+                .value;
+
+
+        const validUntilValue =
+            document
+                .getElementById(
+                    'validUntil'
+                )
+                .value;
+
+
+        const responsibleId =
+            Number(
+                document
+                    .getElementById(
+                        'responsible_id'
+                    )
+                    .value
+            );
+
+
+        const responsibleName =
+            document
+                .getElementById(
+                    'responsible_name'
+                )
+                .value
+                .trim();
+
+
+        const comment =
+            document
+                .getElementById(
+                    'comment'
+                )
+                .value
+                .trim();
+
+
+        /*
+         * ================================
+         * ПРОВЕРКИ
+         * ================================
+         */
+
+        if (!leadId) {
+
+            showError(
+                'Не определён лид'
+            );
+
+            return;
+        }
+
+
+        if (!product) {
+
+            showError(
+                'Укажите автомобиль'
+            );
+
+            return;
+        }
+
+
+        if (
+            !price
+            ||
+            price <= 0
+        ) {
+
+            showError(
+                'Укажите стоимость автомобиля'
+            );
+
+            return;
+        }
+
+
+        if (
+            discount < 0
+        ) {
+
+            showError(
+                'Скидка не может быть отрицательной'
+            );
+
+            return;
+        }
+
+
+        if (
+            discount > price
+        ) {
+
+            showError(
+                'Скидка не может быть больше стоимости'
+            );
+
+            return;
+        }
+
+
+        if (
+            !validUntilValue
+        ) {
+
+            showError(
+                'Укажите срок действия КП'
+            );
+
+            return;
+        }
+
+
+        if (
+            !responsibleId
+        ) {
+
+            showError(
+                'Выберите ответственного'
+            );
+
+            return;
+        }
+
+
+        const deadline =
+            new Date(
+                validUntilValue
+                +
+                'T23:59:00'
+            );
+
+
+        if (
+            Number.isNaN(
+                deadline.getTime()
+            )
+        ) {
+
+            showError(
+                'Некорректная дата'
+            );
+
+            return;
+        }
+
+
+        setLoading(
+            true
+        );
+
+
+        /*
+         * ================================
+         * НОМЕР КП
+         * ================================
+         */
+
+        const now =
+            new Date();
+
+
+        const offerNumber =
+            'КП-'
+            +
+            leadId
+            +
+            '-'
+            +
+            now.getFullYear()
+            +
+            String(
+                now.getMonth() + 1
+            ).padStart(2, '0')
+            +
+            String(
+                now.getDate()
+            ).padStart(2, '0');
+
+
+        /*
+         * ================================
+         * PDF DATA
+         * ================================
+         */
+
+        const offerData = {
+
+            leadId:
+                leadId,
+
+            offerNumber:
+                offerNumber,
+
+            clientName:
+                getLeadClientName(),
+
+            clientPhone:
+                getLeadPhone(),
+
+            product:
+                product,
+
+            price:
+                price,
+
+            discount:
+                discount,
+
+            total:
+                total,
+
+            purchaseType:
+                purchaseType,
+
+            offerStatus:
+                offerStatus,
+
+            deadline:
+                deadline,
+
+            responsibleName:
+                responsibleName,
+
+            comment:
+                comment
+        };
+
+
+        /*
+         * ================================
+         * ГЕНЕРАЦИЯ PDF
+         * ================================
+         */
+
+        showProgress(
+            '1/3 — Формирую PDF...'
+        );
+
+
+        const pdfBase64 =
+            await generatePdfBase64(
+                offerData
+            );
+
+
+        const fileName =
+            'KP_Lead_'
+            +
+            leadId
+            +
+            '_'
+            +
+            toInputDate(
+                now
+            )
+            +
+            '.pdf';
+
+
+        /*
+         * ================================
+         * ЗАГРУЗКА PDF
+         * ================================
+         */
+
+        showProgress(
+            '2/3 — Загружаю PDF на Диск Битрикс24...'
+        );
+
+
+        const pdfFile =
+            await uploadPdfToBitrix(
+                pdfBase64,
+                fileName
+            );
+
+
+        console.log(
+            'PDF FILE:',
+            pdfFile
+        );
+
+
+        const pdfUrl =
+            pdfFile.DETAIL_URL
+            ||
+            pdfFile.DOWNLOAD_URL;
+
+
+        if (
+            !pdfUrl
+        ) {
+
+            throw new Error(
+                'Не получена ссылка на созданный PDF'
+            );
+        }
+
+
+        /*
+         * ================================
+         * БЛОКИ ТАЙМЛАЙНА
+         * ================================
+         */
+
+        const blocks = {
+
+
+            product: {
+
+                type:
+                    'withTitle',
+
+                properties: {
+
+                    title:
+                        'Автомобиль',
+
+                    inline:
+                        true,
+
+                    block: {
+
+                        type:
+                            'text',
+
+                        properties: {
+
+                            value:
+                                product,
+
+                            bold:
+                                true
+                        }
+                    }
+                }
+            },
+
+
+            price: {
+
+                type:
+                    'withTitle',
+
+                properties: {
+
+                    title:
+                        'Стоимость',
+
+                    inline:
+                        true,
+
+                    block: {
+
+                        type:
+                            'text',
+
+                        properties: {
+
+                            value:
+                                formatMoney(
+                                    price
+                                )
+                        }
+                    }
+                }
+            },
+
+
+            discount: {
+
+                type:
+                    'withTitle',
+
+                properties: {
+
+                    title:
+                        'Скидка',
+
+                    inline:
+                        true,
+
+                    block: {
+
+                        type:
+                            'text',
+
+                        properties: {
+
+                            value:
+                                formatMoney(
+                                    discount
+                                )
+                        }
+                    }
+                }
+            },
+
+
+            total: {
+
+                type:
+                    'withTitle',
+
+                properties: {
+
+                    title:
+                        'Итого',
+
+                    inline:
+                        true,
+
+                    block: {
+
+                        type:
+                            'text',
+
+                        properties: {
+
+                            value:
+                                formatMoney(
+                                    total
+                                ),
+
+                            bold:
+                                true
+                        }
+                    }
+                }
+            },
+
+
+            purchase: {
+
+                type:
+                    'withTitle',
+
+                properties: {
+
+                    title:
+                        'Способ покупки',
+
+                    inline:
+                        true,
+
+                    block: {
+
+                        type:
+                            'text',
+
+                        properties: {
+
+                            value:
+                                purchaseType
+                        }
+                    }
+                }
+            },
+
+
+            valid: {
+
+                type:
+                    'withTitle',
+
+                properties: {
+
+                    title:
+                        'Действует до',
+
+                    inline:
+                        true,
+
+                    block: {
+
+                        type:
+                            'text',
+
+                        properties: {
+
+                            value:
+                                formatDate(
+                                    deadline
+                                )
+                        }
+                    }
+                }
+            },
+
+
+            status: {
+
+                type:
+                    'withTitle',
+
+                properties: {
+
+                    title:
+                        'Статус КП',
+
+                    inline:
+                        true,
+
+                    block: {
+
+                        type:
+                            'text',
+
+                        properties: {
+
+                            value:
+                                offerStatus,
+
+                            bold:
+                                true
+                        }
+                    }
+                }
+            },
+
+
+            responsible: {
+
+                type:
+                    'withTitle',
+
+                properties: {
+
+                    title:
+                        'Ответственный',
+
+                    inline:
+                        true,
+
+                    block: {
+
+                        type:
+                            'text',
+
+                        properties: {
+
+                            value:
+                                responsibleName
+                        }
+                    }
+                }
+            },
+
+
+            pdf: {
+
+                type:
+                    'withTitle',
+
+                properties: {
+
+                    title:
+                        'PDF',
+
+                    inline:
+                        true,
+
+                    block: {
+
+                        type:
+                            'link',
+
+                        properties: {
+
+                            text:
+                                'Открыть коммерческое предложение',
+
+                            bold:
+                                true,
+
+                            action: {
+
+                                type:
+                                    'redirect',
+
+                                uri:
+                                    pdfUrl
+                            }
+                        }
+                    }
+                }
+            }
+
+        };
+
+
+        /*
+         * Комментарий
+         */
+
+        if (
+            comment
+        ) {
+
+            blocks.comment = {
+
+                type:
+                    'withTitle',
+
+                properties: {
+
+                    title:
+                        'Дополнительные условия',
+
+                    inline:
+                        false,
+
+                    block: {
+
+                        type:
+                            'largeText',
+
+                        properties: {
+
+                            value:
+                                comment
+                        }
+                    }
+                }
+            };
+        }
+
+
+        /*
+         * ================================
+         * СОЗДАЁМ CRM-ДЕЛО
+         * ================================
+         */
+
+        showProgress(
+            '3/3 — Добавляю КП в таймлайн...'
+        );
+
+
+        await callBitrix(
+
+            'crm.activity.configurable.add',
+
+            {
+
+                ownerTypeId:
+                    1,
+
+                ownerId:
+                    leadId,
+
+
+                fields: {
+
+                    typeId:
+                        'CONFIGURABLE',
+
+                    completed:
+                        false,
+
+                    deadline:
+                        deadline.toISOString(),
+
+                    isIncomingChannel:
+                        'N',
+
+                    responsibleId:
+                        responsibleId,
+
+                    originatorId:
+                        'COMMERCIAL_OFFER_APP',
+
+                    originId:
+                        'KP_'
+                        +
+                        leadId
+                        +
+                        '_'
+                        +
+                        Date.now()
+                },
+
+
+                layout: {
+
+                    /*
+                     * Пока используем уже
+                     * зарегистрированную
+                     * автомобильную иконку.
+                     *
+                     * Потом можем сделать
+                     * отдельную иконку документа.
+                     */
+
+                    icon: {
+
+                        code:
+                            'testdrive-car-icon-v1'
+                    },
+
+
+                    header: {
+
+                        title:
+                            'КП — '
+                            +
+                            product
+                    },
+
+
+                    body: {
+
+                        logo: {
+
+                            code:
+                                'testdrive-car-logo-v1'
+                        },
+
+                        blocks:
+                            blocks
+                    },
+
+
+                    /*
+                     * КНОПКА PDF
+                     */
+
+                    footer: {
+
+                        buttons: {
+
+                            openPdf: {
+
+                                title:
+                                    'Открыть PDF',
+
+                                type:
+                                    'primary',
+
+                                action: {
+
+                                    type:
+                                        'redirect',
+
+                                    uri:
+                                        pdfUrl
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+
+        /*
+         * Переводим лид
+         * в переговоры.
+         */
+
+        await moveToNegotiations(
+            leadId
+        );
+
+
+        finishSuccess(
+            'Коммерческое предложение и PDF успешно созданы'
+        );
+
+
+    } catch (
+        error
+    ) {
+
+        console.error(
+            error
+        );
+
+
+        setLoading(
+            false
+        );
+
+
+        hideProgress();
+
+
+        showError(
+            error.message
+            ||
+            String(
+                error
+            )
+        );
+    }
+}
+
+
+/*
+ * ========================================
+ * ПЕРЕВОД В "ВЕДУТСЯ ПЕРЕГОВОРЫ"
+ * ========================================
+ */
+
+async function moveToNegotiations(
+    leadId
+) {
+
+    if (
+        !lead
+    ) {
+
+        return;
+    }
+
+
+    try {
+
+        const statuses =
+            await callBitrix(
+                'crm.status.list',
+
+                {
+
+                    order: {
+
+                        SORT:
+                            'ASC'
+                    },
+
+                    filter: {
+
+                        ENTITY_ID:
+                            'STATUS'
+                    }
+                }
+            );
+
+
+        if (
+            !Array.isArray(
+                statuses
+            )
+        ) {
+
+            return;
+        }
+
+
+        const current =
+            statuses.find(
+                function(status) {
+
+                    return (
+                        String(
+                            status.STATUS_ID
+                        )
+                        ===
+                        String(
+                            lead.STATUS_ID
+                        )
+                    );
+                }
+            );
+
+
+        if (
+            !current
+        ) {
+
+            return;
+        }
+
+
+        /*
+         * Не двигаем лид назад,
+         * если он уже дальше.
+         */
+
+        const canMove =
+            STAGES_ALLOWED_TO_MOVE
+                .some(
+                    function(
+                        stageName
+                    ) {
+
+                        return (
+                            current.NAME
+                            &&
+                            current.NAME
+                                .trim()
+                                .toLowerCase()
+                            ===
+                            stageName
+                                .trim()
+                                .toLowerCase()
+                        );
+                    }
+                );
+
+
+        if (
+            !canMove
+        ) {
+
+            return;
+        }
+
+
+        const target =
+            statuses.find(
+                function(status) {
+
+                    return (
+                        status.NAME
+                        &&
+                        status.NAME
+                            .trim()
+                            .toLowerCase()
+                        ===
+                        NEGOTIATIONS_STAGE_NAME
+                            .trim()
+                            .toLowerCase()
+                    );
+                }
+            );
+
+
+        if (
+            !target
+        ) {
+
+            console.warn(
+                'Стадия «Ведутся переговоры» не найдена'
+            );
+
+            return;
+        }
+
+
+        await callBitrix(
+            'crm.lead.update',
+
+            {
+
+                id:
+                    leadId,
+
+                fields: {
+
+                    STATUS_ID:
+                        target.STATUS_ID
+                }
+            }
+        );
+
+
+    } catch (
+        error
+    ) {
+
+        /*
+         * Ошибка стадии не должна
+         * удалять уже созданное КП.
+         */
+
+        console.error(
+            'Ошибка изменения стадии:',
+            error
+        );
+    }
+}
+
+
+/*
+ * ========================================
+ * ФОРМАТ ДЕНЕГ
+ * ========================================
+ */
+
+function formatMoney(
+    value
+) {
+
+    return (
+        new Intl
+            .NumberFormat(
+                'ru-RU',
+
+                {
+                    maximumFractionDigits:
+                        0
+                }
+            )
+            .format(
+                Number(
+                    value
+                )
+                ||
+                0
+            )
+        +
+        ' ₽'
+    );
+}
+
+
+/*
+ * ========================================
+ * ФОРМАТ ДАТЫ
+ * ========================================
+ */
+
+function formatDate(
+    date
+) {
+
+    return date
+        .toLocaleDateString(
+            'ru-RU',
+
+            {
+                day:
+                    '2-digit',
+
+                month:
+                    '2-digit',
+
+                year:
+                    'numeric'
+            }
+        );
+}
+
+
+/*
+ * ========================================
+ * UI
+ * ========================================
+ */
+
+function setLoading(
+    loading
+) {
+
+    const button =
+        document
+            .getElementById(
+                'createButton'
+            );
+
+
+    button.disabled =
+        loading;
+
+
+    button.textContent =
+        loading
+        ?
+        'Создаю КП...'
+        :
+        'Создать КП + PDF';
+}
+
+
+function showProgress(
+    text
+) {
+
+    const block =
+        document
+            .getElementById(
+                'progress'
+            );
+
+
+    block.style.display =
+        'block';
+
+
+    block.textContent =
+        text;
+}
+
+
+function hideProgress() {
+
+    document
+        .getElementById(
+            'progress'
+        )
+        .style.display =
+            'none';
+}
+
+
+function hideMessage() {
+
+    const message =
+        document
+            .getElementById(
+                'message'
+            );
+
+
+    message.style.display =
+        'none';
+
+
+    message.textContent =
+        '';
+}
+
+
+function showError(
+    text
+) {
+
+    const message =
+        document
+            .getElementById(
+                'message'
+            );
+
+
+    message.className =
+        'message error';
+
+
+    message.style.display =
+        'block';
+
+
+    message.textContent =
+        text;
+}
+
+
+function showSuccess(
+    text
+) {
+
+    const message =
+        document
+            .getElementById(
+                'message'
+            );
+
+
+    message.className =
+        'message success';
+
+
+    message.style.display =
+        'block';
+
+
+    message.textContent =
+        text;
+}
+
+
+/*
+ * ========================================
+ * ГОТОВО
+ * ========================================
+ */
+
+function finishSuccess(
+    text
+) {
+
+    setLoading(
+        false
+    );
+
+
+    hideProgress();
+
+
+    showSuccess(
+        text
+    );
+
+
+    setTimeout(
+        function() {
+
+            BX24.reloadWindow(
+                function() {
+
+                    BX24.closeApplication();
+                }
+            );
+
+        },
+        1300
+    );
+}
+
+</script>
+
+</body>
+</html>

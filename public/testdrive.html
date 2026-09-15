@@ -1,0 +1,1548 @@
+<!doctype html>
+<html lang="ru">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Тест-драйв</title>
+
+    <script src="https://api.bitrix24.com/api/v1/"></script>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background: #f5f7f8;
+
+            color: #333;
+        }
+
+
+        .form-card {
+
+            max-width: 700px;
+
+            margin: 0 auto;
+
+            background: #fff;
+
+            border-radius: 12px;
+
+            padding: 25px;
+
+            box-shadow:
+                0 3px 15px
+                rgba(0, 0, 0, .08);
+        }
+
+
+        .title {
+
+            margin: 0 0 5px;
+
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+
+        .subtitle {
+
+            margin-bottom: 25px;
+
+            color: #7a7a7a;
+
+            font-size: 14px;
+        }
+
+
+        .form-group {
+
+            margin-bottom: 18px;
+        }
+
+
+        label {
+
+            display: block;
+
+            margin-bottom: 7px;
+
+            font-size: 14px;
+
+            font-weight: 600;
+        }
+
+
+        input,
+        textarea,
+        select {
+
+            width: 100%;
+
+            padding: 11px 12px;
+
+            border:
+                1px solid #c6cdd3;
+
+            border-radius: 6px;
+
+            background: #fff;
+
+            font-size: 15px;
+
+            outline: none;
+        }
+
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+
+            border-color: #2fc6f6;
+        }
+
+
+        textarea {
+
+            min-height: 100px;
+
+            resize: vertical;
+        }
+
+
+        .responsible-row {
+
+            display: flex;
+
+            gap: 10px;
+        }
+
+
+        .responsible-row input {
+
+            flex: 1;
+        }
+
+
+        .responsible-row button {
+
+            flex: 0 0 auto;
+        }
+
+
+        button {
+
+            border: none;
+
+            border-radius: 6px;
+
+            cursor: pointer;
+
+            font-size: 14px;
+
+            padding: 11px 18px;
+        }
+
+
+        .button-select {
+
+            background: #eef2f4;
+
+            color: #333;
+        }
+
+
+        .button-select:hover {
+
+            background: #e1e6e9;
+        }
+
+
+        .button-submit {
+
+            width: 100%;
+
+            margin-top: 8px;
+
+            padding: 13px;
+
+            background: #2fc6f6;
+
+            color: white;
+
+            font-size: 16px;
+
+            font-weight: 600;
+        }
+
+
+        .button-submit:hover {
+
+            background: #22b9e8;
+        }
+
+
+        .button-submit:disabled {
+
+            opacity: .6;
+
+            cursor: default;
+        }
+
+
+        .message {
+
+            margin-top: 15px;
+
+            padding: 12px;
+
+            border-radius: 6px;
+
+            display: none;
+        }
+
+
+        .message.success {
+
+            display: block;
+
+            background: #e7f7ec;
+
+            color: #24743a;
+        }
+
+
+        .message.error {
+
+            display: block;
+
+            background: #fdeaea;
+
+            color: #b93030;
+        }
+
+
+        .lead-info {
+
+            padding: 10px 12px;
+
+            margin-bottom: 20px;
+
+            background: #f6f8f9;
+
+            border-radius: 6px;
+
+            color: #555;
+
+            font-size: 13px;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="form-card">
+
+    <h1 class="title">
+        Тест-драйв
+    </h1>
+
+    <div class="subtitle">
+        Назначение тест-драйва клиенту
+    </div>
+
+
+    <div
+        class="lead-info"
+        id="leadInfo"
+    >
+        Загрузка данных лида...
+    </div>
+
+
+    <input
+        type="hidden"
+        id="lead_id"
+        value="0"
+    >
+
+
+    <!-- ДАТА И ВРЕМЯ -->
+
+    <div class="form-group">
+
+        <label for="datetime">
+            Дата и время тест-драйва
+        </label>
+
+        <input
+            type="datetime-local"
+            id="datetime"
+        >
+
+    </div>
+
+
+   
+
+
+    <!-- АВТОМОБИЛЬ -->
+
+    <div class="form-group">
+
+        <label for="car">
+            Автомобиль
+        </label>
+
+        <input
+            type="text"
+            id="car"
+            placeholder="Например: Chery Tiggo 7 Pro Max"
+        >
+
+    </div>
+
+
+    <!-- МЕСТО -->
+
+   
+
+
+    <!-- ОТВЕТСТВЕННЫЙ -->
+
+    <div class="form-group">
+
+        <label>
+            Ответственный за тест-драйв
+        </label>
+
+
+        <div class="responsible-row">
+
+            <input
+                type="text"
+                id="responsible_name"
+                placeholder="Сотрудник не выбран"
+                readonly
+            >
+
+            <input
+                type="hidden"
+                id="responsible_id"
+            >
+
+
+            <button
+                type="button"
+                class="button-select"
+                onclick="selectResponsible()"
+            >
+                Выбрать
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- КОММЕНТАРИЙ -->
+
+    <div class="form-group">
+
+        <label for="comment">
+            Комментарий
+        </label>
+
+        <textarea
+            id="comment"
+            placeholder="Дополнительная информация по тест-драйву"
+        ></textarea>
+
+    </div>
+
+
+    <button
+        id="createButton"
+        class="button-submit"
+        onclick="createTestDrive()"
+    >
+        Назначить тест-драйв
+    </button>
+
+
+    <div
+        id="message"
+        class="message"
+    ></div>
+
+</div>
+
+
+<script>
+
+/*
+ * ==============================
+ * НАСТРОЙКИ
+ * ==============================
+ */
+
+const WORK_STAGE_NAME =
+    'В работе';
+
+
+let lead = null;
+
+
+/*
+ * ==============================
+ * ИНИЦИАЛИЗАЦИЯ
+ * ==============================
+ */
+
+BX24.init(function () {
+
+    BX24.resizeWindow(
+        750,
+        720
+    );
+
+    var placementInfo =
+        BX24.placement.info();
+
+    var placementOptions =
+        placementInfo
+        &&
+        placementInfo.options
+        ?
+        placementInfo.options
+        :
+        {};
+
+    document.getElementById(
+        'lead_id'
+    ).value =
+        Number(
+            placementOptions.ID
+            ||
+            placementOptions.ENTITY_ID
+            ||
+            0
+        );
+
+    setDefaultDateTime();
+
+    loadLead();
+
+});
+
+
+/*
+ * ==============================
+ * ДАТА ПО УМОЛЧАНИЮ
+ * ==============================
+ *
+ * Ставим ближайший час.
+ */
+
+function setDefaultDateTime() {
+
+    const date =
+        new Date();
+
+    date.setHours(
+        date.getHours() + 1
+    );
+
+    date.setMinutes(0);
+    date.setSeconds(0);
+    date.setMilliseconds(0);
+
+
+    const year =
+        date.getFullYear();
+
+    const month =
+        String(
+            date.getMonth() + 1
+        ).padStart(2, '0');
+
+    const day =
+        String(
+            date.getDate()
+        ).padStart(2, '0');
+
+    const hours =
+        String(
+            date.getHours()
+        ).padStart(2, '0');
+
+    const minutes =
+        String(
+            date.getMinutes()
+        ).padStart(2, '0');
+
+
+    document.getElementById(
+        'datetime'
+    ).value =
+        `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+
+/*
+ * ==============================
+ * ПОЛУЧАЕМ ЛИД
+ * ==============================
+ */
+
+function loadLead() {
+
+    const leadId =
+        Number(
+            document.getElementById(
+                'lead_id'
+            ).value
+        );
+
+
+    if (!leadId) {
+
+        showError(
+            'Битрикс24 не передал ID лида'
+        );
+
+        return;
+    }
+
+
+    BX24.callMethod(
+        'crm.lead.get',
+
+        {
+            id: leadId
+        },
+
+        function (result) {
+
+            if (result.error()) {
+
+                showError(
+                    'Не удалось получить лид: ' +
+                    result.error_description()
+                );
+
+                return;
+            }
+
+
+            lead =
+                result.data();
+
+
+            let title =
+                lead.TITLE
+                ?
+                lead.TITLE
+                :
+                'Лид #' + leadId;
+
+
+            document.getElementById(
+                'leadInfo'
+            ).textContent =
+                'Лид: ' + title;
+
+
+            /*
+             * По умолчанию ставим ответственным
+             * за тест-драйв ответственного за лид.
+             */
+
+            const assignedById =
+                Number(
+                    lead.ASSIGNED_BY_ID
+                );
+
+
+            if (assignedById) {
+
+                document.getElementById(
+                    'responsible_id'
+                ).value =
+                    assignedById;
+
+
+                loadResponsibleName(
+                    assignedById
+                );
+
+            }
+        }
+    );
+}
+
+
+/*
+ * ==============================
+ * ЗАГРУЖАЕМ ИМЯ ОТВЕТСТВЕННОГО
+ * ИЗ ЛИДА
+ * ==============================
+ */
+
+function loadResponsibleName(
+    userId
+) {
+
+    BX24.callMethod(
+        'user.get',
+
+        {
+            ID:
+                userId
+        },
+
+        function (result) {
+
+            if (result.error()) {
+
+                /*
+                 * ID уже сохранён, поэтому
+                 * тест-драйв всё равно можно создать.
+                 */
+
+                document.getElementById(
+                    'responsible_name'
+                ).value =
+                    'Ответственный за лид (ID ' +
+                    userId +
+                    ')';
+
+
+                console.warn(
+                    'Не удалось получить имя ответственного:',
+                    result.error(),
+                    result.error_description()
+                );
+
+                return;
+            }
+
+
+            const users =
+                result.data();
+
+
+            if (
+                !Array.isArray(users)
+                ||
+                users.length === 0
+            ) {
+
+                document.getElementById(
+                    'responsible_name'
+                ).value =
+                    'Ответственный за лид (ID ' +
+                    userId +
+                    ')';
+
+                return;
+            }
+
+
+            const user =
+                users[0];
+
+
+            const fullName =
+                [
+                    user.NAME,
+                    user.LAST_NAME
+                ]
+                .filter(Boolean)
+                .join(' ')
+                .trim();
+
+
+            document.getElementById(
+                'responsible_name'
+            ).value =
+                fullName
+                ?
+                fullName
+                :
+                'Ответственный за лид (ID ' +
+                userId +
+                ')';
+        }
+    );
+}
+
+
+/*
+ * ==============================
+ * РОДНОЙ ВЫБОР СОТРУДНИКА
+ * БИТРИКС24
+ * ==============================
+ */
+
+function selectResponsible() {
+
+    BX24.selectUser(
+        function (user) {
+
+            if (!user) {
+                return;
+            }
+
+
+            document.getElementById(
+                'responsible_id'
+            ).value =
+                user.id;
+
+
+            document.getElementById(
+                'responsible_name'
+            ).value =
+                user.name;
+        }
+    );
+}
+
+
+/*
+ * ==============================
+ * СОЗДАНИЕ ТЕСТ-ДРАЙВА
+ * ==============================
+ */
+
+function createTestDrive() {
+
+    const leadId =
+        Number(
+            document.getElementById(
+                'lead_id'
+            ).value
+        );
+
+
+    const datetimeValue =
+        document.getElementById(
+            'datetime'
+        ).value;
+
+
+
+    const car =
+        document.getElementById(
+            'car'
+        ).value.trim();
+
+
+   
+
+
+    const responsibleId =
+        Number(
+            document.getElementById(
+                'responsible_id'
+            ).value
+        );
+
+
+    const responsibleName =
+        document.getElementById(
+            'responsible_name'
+        ).value.trim();
+
+
+    const comment =
+        document.getElementById(
+            'comment'
+        ).value.trim();
+
+
+    /*
+     * ПРОВЕРКИ
+     */
+
+    if (!leadId) {
+
+        showError(
+            'Не определён лид'
+        );
+
+        return;
+    }
+
+
+    if (!datetimeValue) {
+
+        showError(
+            'Укажите дату и время тест-драйва'
+        );
+
+        return;
+    }
+
+
+    if (!car) {
+
+        showError(
+            'Укажите автомобиль'
+        );
+
+        return;
+    }
+
+
+    if (!responsibleId) {
+
+        showError(
+            'Выберите ответственного за тест-драйв'
+        );
+
+        return;
+    }
+
+
+    const start =
+        new Date(
+            datetimeValue
+        );
+
+
+    if (
+        Number.isNaN(
+            start.getTime()
+        )
+    ) {
+
+        showError(
+            'Некорректная дата тест-драйва'
+        );
+
+        return;
+    }
+
+
+    
+
+
+    setLoading(true);
+
+
+    /*
+     * ==============================
+     * СОБИРАЕМ КРАСИВУЮ КАРТОЧКУ
+     * ДЛЯ ТАЙМЛАЙНА
+     * ==============================
+     */
+
+    const blocks = {
+
+
+        date: {
+
+            type:
+                'withTitle',
+
+            properties: {
+
+                title:
+                    'Дата и время',
+
+                inline:
+                    true,
+
+                block: {
+
+                    type:
+                        'text',
+
+                    properties: {
+
+                        value:
+                            formatDateTime(
+                                start
+                            )
+                    }
+                }
+            }
+        },
+
+
+      
+
+
+        car: {
+
+            type:
+                'withTitle',
+
+            properties: {
+
+                title:
+                    'Автомобиль',
+
+                inline:
+                    true,
+
+                block: {
+
+                    type:
+                        'text',
+
+                    properties: {
+
+                        value:
+                            car,
+
+                        bold:
+                            true
+                    }
+                }
+            }
+        },
+
+
+        responsible: {
+
+            type:
+                'withTitle',
+
+            properties: {
+
+                title:
+                    'Ответственный',
+
+                inline:
+                    true,
+
+                block: {
+
+                    type:
+                        'text',
+
+                    properties: {
+
+                        value:
+                            responsibleName,
+
+                        bold:
+                            true
+                    }
+                }
+            }
+        }
+
+    };
+
+
+    /*
+     * Место добавляем только если заполнено.
+     */
+
+    
+
+
+    /*
+     * Комментарий добавляем только если есть.
+     */
+
+    if (comment) {
+
+        blocks.comment = {
+
+            type:
+                'withTitle',
+
+            properties: {
+
+                title:
+                    'Комментарий',
+
+                inline:
+                    false,
+
+                block: {
+
+                    type:
+                        'text',
+
+                    properties: {
+
+                        value:
+                            comment,
+                            multiline:
+                                    true
+                    }
+                }
+            }
+        };
+    }
+
+
+    /*
+     * ==============================
+     * СОЗДАЁМ КОНФИГУРИРУЕМОЕ ДЕЛО
+     * ==============================
+     */
+
+    BX24.callMethod(
+
+        'crm.activity.configurable.add',
+
+        {
+
+            ownerTypeId:
+                1,
+
+            ownerId:
+                leadId,
+
+
+            fields: {
+
+                /*
+                 * Не указываем свой typeId.
+                 * Битрикс использует CONFIGURABLE.
+                 */
+
+                completed:
+                    false,
+
+
+                /*
+                 * Срок дела =
+                 * время начала тест-драйва.
+                 */
+
+                deadline:
+                    start.toISOString(),
+
+
+                /*
+                 * Напоминания:
+                 * за 60 минут
+                 * и за 15 минут.
+                 */
+
+                
+
+                isIncomingChannel:
+                    false,
+
+
+                responsibleId:
+                    responsibleId,
+
+
+                originatorId:
+                    'TEST_DRIVE_APP',
+
+
+                originId:
+                    'TD_' +
+                    leadId +
+                    '_' +
+                    Date.now()
+            },
+
+
+            /*
+             * ==============================
+             * ВНЕШНИЙ ВИД В ТАЙМЛАЙНЕ
+             * ==============================
+             */
+
+           layout: {
+
+    icon: {
+
+        code:
+            'testdrive-car-icon-v1'
+    },
+
+
+    header: {
+
+        title:
+            'Тест-драйв — ' +
+            car
+    },
+
+
+    body: {
+
+        logo: {
+
+            code:
+                'testdrive-car-logo-v1'
+        },
+
+        blocks:
+            blocks
+    },
+
+
+    /*
+     * ==================================
+     * КНОПКИ РЕЗУЛЬТАТА ТЕСТ-ДРАЙВА
+     * ==================================
+     */
+
+    footer: {
+
+        buttons: {
+
+
+            passed: {
+
+                title:
+                    'Тест-драйв пройден',
+
+                type:
+                    'primary',
+
+                action: {
+
+                    type:
+                        'openRestApp',
+
+                    actionParams: {
+
+                        mode:
+                            'testdrive_result',
+
+                        result:
+                            'passed',
+
+                        leadId:
+                            leadId,
+
+                        car:
+                            car,
+
+                        date:
+                            formatDateTime(start),
+
+                      
+
+                      
+                        responsibleId:
+                            responsibleId,
+
+                        responsibleName:
+                            responsibleName
+                    },
+
+                    sliderParams: {
+
+                        title:
+                            'Результат тест-драйва',
+
+                        width:
+                            720
+                    }
+                }
+            },
+
+
+            failed: {
+
+                title:
+                    'Не состоялся',
+
+                type:
+                    'secondary',
+
+                action: {
+
+                    type:
+                        'openRestApp',
+
+                    actionParams: {
+
+                        mode:
+                            'testdrive_result',
+
+                        result:
+                            'failed',
+
+                        leadId:
+                            leadId,
+
+                        car:
+                            car,
+
+                        date:
+                            formatDateTime(start),
+
+                      
+
+                        
+
+                        responsibleId:
+                            responsibleId,
+
+                        responsibleName:
+                            responsibleName
+                    },
+
+                    sliderParams: {
+
+                        title:
+                            'Тест-драйв не состоялся',
+
+                        width:
+                            650
+                    }
+                }
+            }
+        }
+    }
+}
+
+        },
+
+
+        function (result) {
+
+            if (result.error()) {
+
+                setLoading(false);
+
+                showError(
+                    'Ошибка создания тест-драйва: ' +
+                    result.error() +
+                    ' — ' +
+                    result.error_description()
+                );
+
+                console.error(
+                    result.error(),
+                    result.error_description()
+                );
+
+                return;
+            }
+
+
+            console.log(
+                'Тест-драйв создан:',
+                result.data()
+            );
+
+
+            /*
+             * После создания
+             * переводим лид в "В работе".
+             */
+
+            moveLeadToWork(
+                leadId
+            );
+
+        }
+    );
+
+}
+
+
+/*
+ * ==============================
+ * ПЕРЕВОД ЛИДА В "В РАБОТЕ"
+ * ==============================
+ */
+
+function moveLeadToWork(
+    leadId
+) {
+
+    BX24.callMethod(
+
+        'crm.status.list',
+
+        {
+
+            order: {
+                SORT:
+                    'ASC'
+            },
+
+            filter: {
+                ENTITY_ID:
+                    'STATUS'
+            }
+        },
+
+
+        function (result) {
+
+            /*
+             * Даже если стадия
+             * не найдена —
+             * тест-драйв уже создан.
+             */
+
+            if (result.error()) {
+
+                finishSuccess(
+                    'Тест-драйв назначен. ' +
+                    'Но не удалось проверить стадию лида.'
+                );
+
+                return;
+            }
+
+
+            const statuses =
+                result.data();
+
+
+            const workStatus =
+                statuses.find(
+                    function (status) {
+
+                        return (
+                            status.NAME
+                            &&
+                            status.NAME
+                                .trim()
+                                .toLowerCase()
+                            ===
+                            WORK_STAGE_NAME
+                                .trim()
+                                .toLowerCase()
+                        );
+                    }
+                );
+
+
+            if (!workStatus) {
+
+                finishSuccess(
+                    'Тест-драйв назначен. ' +
+                    'Стадия «В работе» не найдена.'
+                );
+
+                return;
+            }
+
+
+            BX24.callMethod(
+
+                'crm.lead.update',
+
+                {
+
+                    id:
+                        leadId,
+
+                    fields: {
+
+                        STATUS_ID:
+                            workStatus.STATUS_ID
+                    }
+                },
+
+
+                function (
+                    updateResult
+                ) {
+
+                    if (
+                        updateResult.error()
+                    ) {
+
+                        finishSuccess(
+                            'Тест-драйв назначен, ' +
+                            'но стадия лида не изменилась.'
+                        );
+
+                        return;
+                    }
+
+
+                    finishSuccess(
+                        'Тест-драйв назначен. ' +
+                        'Лид переведён в «В работе».'
+                    );
+
+                }
+            );
+
+        }
+    );
+
+}
+
+
+/*
+ * ==============================
+ * УСПЕШНОЕ ЗАВЕРШЕНИЕ
+ * ==============================
+ */
+
+function finishSuccess(
+    text
+) {
+
+    setLoading(false);
+
+    showSuccess(
+        text
+    );
+
+
+    /*
+     * Через секунду просим
+     * Битрикс обновить карточку.
+     */
+
+    setTimeout(
+        function () {
+
+            BX24.reloadWindow(
+                function () {
+
+                    BX24.closeApplication();
+
+                }
+            );
+
+        },
+        1200
+    );
+}
+
+
+/*
+ * ==============================
+ * ФОРМАТ ДАТЫ
+ * ==============================
+ */
+
+function formatDateTime(
+    date
+) {
+
+    return date.toLocaleString(
+        'ru-RU',
+        {
+            day:
+                '2-digit',
+
+            month:
+                '2-digit',
+
+            year:
+                'numeric',
+
+            hour:
+                '2-digit',
+
+            minute:
+                '2-digit'
+        }
+    );
+}
+
+
+/*
+ * ==============================
+ * ФОРМАТ ДЛИТЕЛЬНОСТИ
+ * ==============================
+ */
+
+
+
+/*
+ * ==============================
+ * ИНТЕРФЕЙС
+ * ==============================
+ */
+
+function setLoading(
+    loading
+) {
+
+    const button =
+        document.getElementById(
+            'createButton'
+        );
+
+
+    button.disabled =
+        loading;
+
+
+    button.textContent =
+        loading
+        ?
+        'Создаю тест-драйв...'
+        :
+        'Назначить тест-драйв';
+}
+
+
+function showError(
+    text
+) {
+
+    const message =
+        document.getElementById(
+            'message'
+        );
+
+
+    message.className =
+        'message error';
+
+
+    message.textContent =
+        text;
+}
+
+
+function showSuccess(
+    text
+) {
+
+    const message =
+        document.getElementById(
+            'message'
+        );
+
+
+    message.className =
+        'message success';
+
+
+    message.textContent =
+        text;
+}
+
+</script>
+
+
+</body>
+</html>
