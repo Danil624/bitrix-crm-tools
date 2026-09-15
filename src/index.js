@@ -670,7 +670,465 @@ async function leadPhoneGuard(request) {
     reason,
   });
 }
+function sleep(ms) {
 
+  return new Promise(
+    resolve =>
+      setTimeout(
+        resolve,
+        ms
+      )
+  );
+}
+
+
+async function getLeadMovementSnapshot(
+  domain,
+  accessToken,
+  leadId,
+  ignoredActivityId
+) {
+
+  const leadResponse =
+    await restCall(
+      domain,
+      accessToken,
+      'crm.lead.get',
+      {
+        id:
+          leadId
+      }
+    );
+
+
+  if (leadResponse.error) {
+
+    throw new Error(
+      'crm.lead.get: ' +
+      (
+        leadResponse.error_description
+        ||
+        leadResponse.error
+      )
+    );
+  }
+
+
+  const activityResponse =
+    await restCall(
+      domain,
+      accessToken,
+      'crm.activity.list',
+      {
+
+        order: {
+
+          ID:
+            'DESC'
+        },
+
+
+        filter: {
+
+          OWNER_TYPE_ID:
+            1,
+
+          OWNER_ID:
+            leadId
+        },
+
+
+        select: [
+
+          'ID',
+          'CREATED',
+          'LAST_UPDATED',
+          'SUBJECT',
+          'TYPE_ID',
+          'PROVIDER_ID',
+          'PROVIDER_TYPE_ID'
+
+        ],
+
+
+        start:
+          0
+      }
+    );
+
+
+  if (activityResponse.error) {
+
+    throw new Error(
+      'crm.activity.list: ' +
+      (
+        activityResponse.error_description
+        ||
+        activityResponse.error
+      )
+    );
+  }
+
+
+  const activities =
+    Array.isArray(
+      activityResponse.result
+    )
+      ?
+      activityResponse.result
+      :
+      [];
+
+
+  /*
+   * Сам тест-драйв исключаем.
+   *
+   * Иначе его собственное завершение
+   * будет считаться новым действием.
+   */
+
+  const relevantActivities =
+    activities.filter(
+      function(item) {
+
+        return (
+          Number(
+            item?.ID || 0
+          )
+          !==
+          Number(
+            ignoredActivityId || 0
+          )
+        );
+      }
+    );
+
+
+  let maxActivityId =
+    0;
+
+
+  let latestActivityUpdated =
+    '';
+
+
+  for (
+    const item
+    of relevantActivities
+  ) {
+
+    const id =
+      Number(
+        item?.ID || 0
+      );
+
+
+    if (
+      id > maxActivityId
+    ) {
+
+      maxActivityId =
+        id;
+    }
+
+
+    const updated =
+      String(
+        item?.LAST_UPDATED
+        ||
+        item?.CREATED
+        ||
+        ''
+      );
+
+
+    if (
+      updated >
+      latestActivityUpdated
+    ) {
+
+      latestActivityUpdated =
+        updated;
+    }
+  }
+
+
+  const lead =
+    leadResponse.result
+    ||
+    {};
+
+
+  return {
+
+    statusId:
+      String(
+        lead.STATUS_ID || ''
+      ),
+
+    maxActivityId:
+      maxActivityId,
+
+    latestActivityUpdated:
+      latestActivityUpdated
+  };
+}
+
+
+async function runTestDriveWatch(
+  payload
+) {
+
+  const domain =
+    String(
+      payload.domain || ''
+    );
+
+
+  const accessToken =
+    String(
+      payload.accessToken || ''
+    );
+
+
+  const leadId =
+    Number(
+      payload.leadId || 0
+    );
+
+
+  const activityId =
+    Number(
+      payload.activityId || 0
+    );
+
+
+  /*
+   * Сейчас максимум 25 секунд,
+   * потому что это тестовый механизм
+   * через waitUntil.
+   */
+
+  const delayMs =
+    Math.min(
+      Math.max(
+        Number(
+          payload.delayMs || 5000
+        ),
+        1000
+      ),
+      25000
+    );
+
+
+  if (
+    !domain
+    ||
+    !accessToken
+    ||
+    !leadId
+  ) {
+
+    throw new Error(
+      'Не хватает данных для контроля тест-драйва'
+    );
+  }
+
+
+  /*
+   * Даём Битриксу закончить
+   * сохранение самого результата
+   * тест-драйва.
+   */
+
+  await sleep(
+    300
+  );
+
+
+  /*
+   * Запоминаем состояние лида
+   * сразу после тест-драйва.
+   */
+
+  const before =
+    await getLeadMovementSnapshot(
+      domain,
+      accessToken,
+      leadId,
+      activityId
+    );
+
+
+  /*
+   * ТЕСТ:
+   * ждём 5 секунд.
+   */
+
+  await sleep(
+    delayMs
+  );
+
+
+  /*
+   * Проверяем ещё раз.
+   */
+
+  const after =
+    await getLeadMovementSnapshot(
+      domain,
+      accessToken,
+      leadId,
+      activityId
+    );
+
+
+  /*
+   * Считаем движением:
+   *
+   * 1. Изменилась стадия.
+   * 2. Создалось новое дело.
+   * 3. Изменилось существующее дело.
+   *
+   * Встреча, звонок, задача,
+   * наше КП и т.п. являются CRM-делами.
+   */
+
+  const hasMovement =
+
+    before.statusId
+    !==
+    after.statusId
+
+    ||
+
+    after.maxActivityId
+    >
+    before.maxActivityId
+
+    ||
+
+    after.latestActivityUpdated
+    !==
+    before.latestActivityUpdated;
+
+
+  /*
+   * Менеджер что-то сделал —
+   * лид не трогаем.
+   */
+
+  if (
+    hasMovement
+  ) {
+
+    return {
+
+      movedToAbandoned:
+        false,
+
+      reason:
+        'movement_detected',
+
+      before:
+        before,
+
+      after:
+        after
+    };
+  }
+
+
+  /*
+   * Ничего не произошло.
+   * Ищем реальный ID стадии
+   * "Брошенный".
+   */
+
+  const abandonedStatusId =
+    await findLeadStatusIdByName(
+      domain,
+      accessToken,
+      'Брошенный'
+    );
+
+
+  if (
+    !abandonedStatusId
+  ) {
+
+    throw new Error(
+      'Стадия «Брошенный» не найдена'
+    );
+  }
+
+
+  /*
+   * Отправляем лид в Брошенный.
+   */
+
+  const updateResponse =
+    await restCall(
+      domain,
+      accessToken,
+      'crm.lead.update',
+      {
+
+        id:
+          leadId,
+
+
+        fields: {
+
+          STATUS_ID:
+            abandonedStatusId
+        }
+      }
+    );
+
+
+  if (
+    updateResponse.error
+  ) {
+
+    throw new Error(
+      'crm.lead.update: ' +
+      (
+        updateResponse.error_description
+        ||
+        updateResponse.error
+      )
+    );
+  }
+
+
+  /*
+   * Пишем причину в таймлайн.
+   */
+
+  await addLeadTimelineComment(
+    domain,
+    accessToken,
+    leadId,
+
+    '⚠️ После состоявшегося тест-драйва ' +
+    'в течение 5 секунд по лиду не было новых действий. ' +
+    'Лид автоматически переведён в стадию «Брошенный».'
+  );
+
+
+  return {
+
+    movedToAbandoned:
+      true,
+
+    before:
+      before,
+
+    after:
+      after
+  };
+}
 
 async function assetResponse(env, request, assetPath) {
   const url = new URL(request.url);
@@ -697,7 +1155,7 @@ async function assetResponse(env, request, assetPath) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env,ctx) {
     const url = new URL(request.url);
     const path = url.pathname.toLowerCase();
 
@@ -731,7 +1189,94 @@ export default {
 
       return leadPhoneGuard(request);
     }
+if (
+  path ===
+  '/testdrive-watch.php'
+) {
 
+  if (
+    request.method
+    !==
+    'POST'
+  ) {
+
+    return json(
+      {
+
+        ok:
+          true,
+
+        endpoint:
+          'testdrive-watch',
+
+        testDelayMs:
+          5000
+      }
+    );
+  }
+
+
+  let payload;
+
+
+  try {
+
+    payload =
+      await request.json();
+
+  } catch {
+
+    return json(
+      {
+
+        ok:
+          false,
+
+        error:
+          'bad_json'
+      },
+
+      400
+    );
+  }
+
+
+  const task =
+    runTestDriveWatch(
+      payload
+    )
+      .catch(
+        function(error) {
+
+          console.error(
+            'testdrive-watch:',
+            error
+          );
+        }
+      );
+
+
+  ctx.waitUntil(
+    task
+  );
+
+
+  return json(
+    {
+
+      ok:
+        true,
+
+      scheduled:
+        true,
+
+      delayMs:
+        5000
+    },
+
+    202
+  );
+}
 
     // Старый диагностический обработчик больше не нужен.
     // Возвращаем 200, пока install.php удаляет старые события.
