@@ -666,7 +666,8 @@ let context =
 
 let rating =
     0;
-
+const TEST_DRIVE_WATCH_DELAY_MS =
+    5000;
 
 /*
  * ========================================
@@ -1070,7 +1071,161 @@ function callBitrix(
     );
 }
 
+/*
+ * ========================================
+ * ПЕРЕВОД ЛИДА НА СТАДИЮ ПО НАЗВАНИЮ
+ * ========================================
+ */
 
+async function moveLeadToStageByName(
+    leadId,
+    stageName
+) {
+
+    const statuses =
+        await callBitrix(
+            'crm.status.list',
+            {
+                order: {
+                    SORT: 'ASC'
+                },
+
+                filter: {
+                    ENTITY_ID: 'STATUS'
+                }
+            }
+        );
+
+
+    const target =
+        (statuses || []).find(
+            function(status) {
+
+                return String(
+                    status.NAME || ''
+                ).trim().toLowerCase()
+                ===
+                String(
+                    stageName || ''
+                ).trim().toLowerCase();
+            }
+        );
+
+
+    if (!target) {
+
+        throw new Error(
+            'Не найдена стадия «' +
+            stageName +
+            '»'
+        );
+    }
+
+
+    await callBitrix(
+        'crm.lead.update',
+        {
+            id: leadId,
+
+            fields: {
+
+                STATUS_ID:
+                    target.STATUS_ID
+            }
+        }
+    );
+}
+
+
+/*
+ * ========================================
+ * КОНТРОЛЬ ПОСЛЕ УСПЕШНОГО ТЕСТ-ДРАЙВА
+ * ========================================
+ */
+
+async function startPassedTestDriveWatch(
+    leadId,
+    activityId
+) {
+
+    const auth =
+        BX24.getAuth();
+
+
+    if (
+        !auth
+        ||
+        !auth.domain
+        ||
+        !auth.access_token
+    ) {
+
+        throw new Error(
+            'Не удалось получить авторизацию для контроля лида'
+        );
+    }
+
+
+    const response =
+        await fetch(
+            '/testdrive-watch.php',
+            {
+                method:
+                    'POST',
+
+                headers: {
+
+                    'Content-Type':
+                        'application/json'
+                },
+
+                body:
+                    JSON.stringify(
+                        {
+
+                            domain:
+                                auth.domain,
+
+                            accessToken:
+                                auth.access_token,
+
+                            leadId:
+                                Number(
+                                    leadId
+                                ),
+
+                            activityId:
+                                Number(
+                                    activityId
+                                ),
+
+                            delayMs:
+                                TEST_DRIVE_WATCH_DELAY_MS
+                        }
+                    )
+            }
+        );
+
+
+    const data =
+        await response.json();
+
+
+    if (
+        !response.ok
+        ||
+        !data.ok
+    ) {
+
+        throw new Error(
+            data.error_description
+            ||
+            data.error
+            ||
+            'Не удалось запустить контроль после тест-драйва'
+        );
+    }
+}
 /*
  * ========================================
  * СОХРАНЯЕМ УСПЕШНЫЙ ТЕСТ-ДРАЙВ
@@ -1770,25 +1925,51 @@ async function updateTestDrive(
         );
 
 
-        showSuccess(
-            'Результат тест-драйва сохранён'
-        );
+     if (
+    result.status
+    ===
+    'Не состоялся'
+) {
+
+    await moveLeadToStageByName(
+        leadId,
+        'Брошенный'
+    );
 
 
-        setTimeout(
+    showSuccess(
+        'Тест-драйв не состоялся. ' +
+        'Лид переведён в «Брошенный».'
+    );
+
+} else {
+
+    await startPassedTestDriveWatch(
+        leadId,
+        activityId
+    );
+
+
+    showSuccess(
+        'Тест-драйв пройден. ' +
+        'Запущен контроль активности лида на 5 секунд.'
+    );
+}
+
+
+setTimeout(
+    function() {
+
+        BX24.reloadWindow(
             function() {
 
-                BX24.reloadWindow(
-                    function() {
-
-                        BX24.closeApplication();
-                    }
-                );
-
-            },
-            900
+                BX24.closeApplication();
+            }
         );
 
+    },
+    900
+);
 
     } catch (error) {
 
