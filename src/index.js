@@ -9,7 +9,7 @@ function json(data, status = 200) {
     },
   });
 }
-
+ 
 function normalizeText(value) {
   return String(value ?? '')
     .trim()
