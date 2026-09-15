@@ -162,12 +162,17 @@ var EVENTS = [
     {
         event: 'ONCRMACTIVITYUPDATE',
         file: 'activity-guard.php'
+    },
+    {
+        event: 'ONCRMLEADUPDATE',
+        file: 'lead-phone-guard.php'
     }
 ];
 
 var KNOWN_EVENT_FILES = [
     'activity-guard.php',
-    'lead-status-logger.php'
+    'lead-status-logger.php',
+    'lead-phone-guard.php'
 ];
 
 function getPlacements(callback) {
@@ -295,9 +300,17 @@ function cleanupEvents(items, index, callback) {
     }
 
     var keep =
-        ev === 'ONCRMACTIVITYUPDATE'
-        &&
-        handler === handlerUrl('activity-guard.php');
+        (
+            ev === 'ONCRMACTIVITYUPDATE'
+            &&
+            handler === handlerUrl('activity-guard.php')
+        )
+        ||
+        (
+            ev === 'ONCRMLEADUPDATE'
+            &&
+            handler === handlerUrl('lead-phone-guard.php')
+        );
 
     if (keep) {
         log('Оставляем событие: ' + ev + ' → ' + handler, 'ok');
