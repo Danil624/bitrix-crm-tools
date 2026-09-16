@@ -3518,6 +3518,635 @@ function fillResultOptions(
 
 /*
  * =========================================================
+ * ЗАМЕНЯЕМ СТАНДАРТНУЮ КАРТОЧКУ ЗВОНКА
+ * НА НАШУ КОНФИГУРИРУЕМУЮ КАРТОЧКУ
+ * =========================================================
+ */
+
+function bxCallPromise(
+    method,
+    params = {}
+) {
+
+    return new Promise(
+        function (
+            resolve,
+            reject
+        ) {
+
+            BX24.callMethod(
+                method,
+                params,
+
+                function (result) {
+
+                    if (result.error()) {
+
+                        reject(
+                            new Error(
+                                result.error() +
+                                ': ' +
+                                result.error_description()
+                            )
+                        );
+
+                        return;
+                    }
+
+
+                    resolve(
+                        result.data()
+                    );
+                }
+            );
+        }
+    );
+}
+
+
+function waitMs(
+    ms
+) {
+
+    return new Promise(
+        function (resolve) {
+
+            setTimeout(
+                resolve,
+                ms
+            );
+        }
+    );
+}
+
+
+async function waitForCrmActivityId(
+    timeoutMs = 5000
+) {
+
+    const startedAt =
+        Date.now();
+
+
+    while (
+        !crmActivityId
+        &&
+        Date.now() - startedAt < timeoutMs
+    ) {
+
+        refreshCallStatus();
+
+        await waitMs(
+            300
+        );
+    }
+
+
+    return normalizePositiveId(
+        crmActivityId
+    );
+}
+
+
+function formatCallDuration(
+    startTime,
+    endTime
+) {
+
+    const start =
+        new Date(
+            startTime || ''
+        ).getTime();
+
+
+    const end =
+        new Date(
+            endTime || ''
+        ).getTime();
+
+
+    if (
+        !Number.isFinite(start)
+        ||
+        !Number.isFinite(end)
+        ||
+        end <= start
+    ) {
+
+        return '—';
+    }
+
+
+    const totalSeconds =
+        Math.max(
+            0,
+            Math.round(
+                (end - start) / 1000
+            )
+        );
+
+
+    const minutes =
+        Math.floor(
+            totalSeconds / 60
+        );
+
+
+    const seconds =
+        totalSeconds % 60;
+
+
+    if (!minutes) {
+
+        return seconds + ' сек';
+    }
+
+
+    return (
+        minutes +
+        ' мин ' +
+        String(seconds).padStart(2, '0') +
+        ' сек'
+    );
+}
+
+
+function formatCallDate(
+    value
+) {
+
+    const date =
+        new Date(
+            value || ''
+        );
+
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+
+        return '—';
+    }
+
+
+    return date.toLocaleString(
+        'ru-RU'
+    );
+}
+
+
+function getCallResultTagType(
+    resultText
+) {
+
+    const normalized =
+        normalizeText(
+            resultText
+        );
+
+
+    if (
+        normalized.includes('отказ')
+        ||
+        normalized.includes('ошибоч')
+    ) {
+
+        return 'warning';
+    }
+
+
+    return 'primary';
+}
+
+
+async function replaceStandardCallWithCustomCard(
+    resultText
+) {
+
+    if (!leadId) {
+
+        throw new Error(
+            'Не определён лид.'
+        );
+    }
+
+
+    const originalActivityId =
+        await waitForCrmActivityId(
+            5000
+        );
+
+
+    if (!originalActivityId) {
+
+        throw new Error(
+            'Bitrix24 не передал CRM_ACTIVITY_ID звонка.'
+        );
+    }
+
+
+    const activity =
+        await bxCallPromise(
+            'crm.activity.get',
+            {
+                id:
+                    originalActivityId
+            }
+        );
+
+
+    const lead =
+        await bxCallPromise(
+            'crm.lead.get',
+            {
+                id:
+                    leadId
+            }
+        );
+
+
+    const incoming =
+        String(
+            activity.DIRECTION || ''
+        ) === '1';
+
+
+    const directionTitle =
+        incoming
+        ?
+        'Входящий звонок'
+        :
+        'Исходящий звонок';
+
+
+    const clientTitle =
+        String(
+            lead.TITLE ||
+            ('Лид #' + leadId)
+        );
+
+
+    const phone =
+        String(
+            phoneNumber || '—'
+        );
+
+
+    const callDate =
+        formatCallDate(
+            activity.START_TIME ||
+            activity.CREATED
+        );
+
+
+    const duration =
+        formatCallDuration(
+            activity.START_TIME,
+            activity.END_TIME
+        );
+
+
+    const responsibleId =
+        normalizePositiveId(
+            activity.RESPONSIBLE_ID ||
+            lead.ASSIGNED_BY_ID
+        );
+
+
+    const fields = {
+
+        typeId:
+            'CONFIGURABLE',
+
+        completed:
+            true,
+
+        isIncomingChannel:
+            incoming,
+
+        originatorId:
+            'CALL_RESULT_APP',
+
+        originId:
+            'CALL_' +
+            originalActivityId
+    };
+
+
+    if (responsibleId) {
+
+        fields.responsibleId =
+            responsibleId;
+    }
+
+
+    const customActivity =
+        await bxCallPromise(
+            'crm.activity.configurable.add',
+            {
+                ownerTypeId:
+                    1,
+
+                ownerId:
+                    leadId,
+
+                fields:
+                    fields,
+
+                layout: {
+
+                    icon: {
+                        code:
+                            'call-completed'
+                    },
+
+                    header: {
+
+                        title:
+                            directionTitle,
+
+                        tags: {
+
+                            result: {
+
+                                type:
+                                    getCallResultTagType(
+                                        resultText
+                                    ),
+
+                                title:
+                                    resultText
+                            }
+                        }
+                    },
+
+                    body: {
+
+                        logo: {
+                            code:
+                                'call-incoming'
+                        },
+
+                        blocks: {
+
+                            client: {
+
+                                type:
+                                    'withTitle',
+
+                                properties: {
+
+                                    title:
+                                        'Клиент',
+
+                                    inline:
+                                        true,
+
+                                    block: {
+
+                                        type:
+                                            'link',
+
+                                        properties: {
+
+                                            text:
+                                                clientTitle,
+
+                                            bold:
+                                                true,
+
+                                            action: {
+
+                                                type:
+                                                    'redirect',
+
+                                                uri:
+                                                    '/crm/lead/details/' +
+                                                    leadId +
+                                                    '/'
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+
+                            phone: {
+
+                                type:
+                                    'withTitle',
+
+                                properties: {
+
+                                    title:
+                                        'Телефон',
+
+                                    inline:
+                                        true,
+
+                                    block: {
+
+                                        type:
+                                            'text',
+
+                                        properties: {
+
+                                            value:
+                                                phone
+                                        }
+                                    }
+                                }
+                            },
+
+                            callResult: {
+
+                                type:
+                                    'withTitle',
+
+                                properties: {
+
+                                    title:
+                                        'Результат',
+
+                                    inline:
+                                        true,
+
+                                    block: {
+
+                                        type:
+                                            'text',
+
+                                        properties: {
+
+                                            value:
+                                                resultText,
+
+                                            bold:
+                                                true
+                                        }
+                                    }
+                                }
+                            },
+
+                            duration: {
+
+                                type:
+                                    'withTitle',
+
+                                properties: {
+
+                                    title:
+                                        'Длительность',
+
+                                    inline:
+                                        true,
+
+                                    block: {
+
+                                        type:
+                                            'text',
+
+                                        properties: {
+
+                                            value:
+                                                duration
+                                        }
+                                    }
+                                }
+                            },
+
+                            date: {
+
+                                type:
+                                    'withTitle',
+
+                                properties: {
+
+                                    title:
+                                        'Дата и время',
+
+                                    inline:
+                                        true,
+
+                                    block: {
+
+                                        type:
+                                            'text',
+
+                                        properties: {
+
+                                            value:
+                                                callDate
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+
+                    footer: {
+
+                        buttons: {
+
+                            openLead: {
+
+                                title:
+                                    'Открыть лид',
+
+                                type:
+                                    'primary',
+
+                                action: {
+
+                                    type:
+                                        'redirect',
+
+                                    uri:
+                                        '/crm/lead/details/' +
+                                        leadId +
+                                        '/'
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+
+    const customActivityId =
+        normalizePositiveId(
+            customActivity?.activity?.id
+        );
+
+
+    if (!customActivityId) {
+
+        throw new Error(
+            'Bitrix24 создал карточку, но не вернул её ID.'
+        );
+    }
+
+
+    try {
+
+        await bxCallPromise(
+            'crm.activity.delete',
+            {
+                id:
+                    originalActivityId
+            }
+        );
+
+    } catch (deleteError) {
+
+        /*
+         * Не оставляем две карточки.
+         * Если стандартную удалить не удалось,
+         * удаляем созданную кастомную обратно.
+         */
+
+        try {
+
+            await bxCallPromise(
+                'crm.activity.delete',
+                {
+                    id:
+                        customActivityId
+                }
+            );
+
+        } catch (rollbackError) {
+
+            console.warn(
+                'Не удалось откатить кастомную карточку:',
+                rollbackError
+            );
+        }
+
+
+        throw deleteError;
+    }
+
+
+    crmActivityId =
+        0;
+
+
+    return {
+
+        customActivityId:
+            customActivityId,
+
+        deletedActivityId:
+            originalActivityId
+    };
+}
+
+
+/*
+ * =========================================================
  * СОХРАНЯЕМ РЕЗУЛЬТАТ В СОЗДАННЫЙ ЛИД
  * =========================================================
  */
@@ -3726,31 +4355,69 @@ function saveCallResult() {
                     }
 
 
-                    showSuccess(
-                        successText
-                    );
-
-
                     /*
-                     * На всякий случай ещё раз
-                     * пытаемся связать дело звонка
-                     * с лидом перед закрытием.
+                     * После сохранения результата
+                     * заменяем стандартную карточку звонка
+                     * на нашу конфигурируемую карточку.
+                     *
+                     * Стандартное дело удаляем ТОЛЬКО
+                     * после успешного создания нашей карточки.
                      */
 
-                    ensureCallActivityBinding();
+                    replaceStandardCallWithCustomCard(
+                        selectedText
+                    )
+                        .then(
+                            function () {
+
+                                showSuccess(
+                                    successText +
+                                    '. Карточка звонка обновлена.'
+                                );
 
 
-                    BX24.placement.call(
-                        'enableAutoClose',
-                        {},
+                                BX24.placement.call(
+                                    'enableAutoClose',
+                                    {},
 
-                        function () {
+                                    function () {
 
-                            console.log(
-                                'Автозакрытие карточки звонка снова разрешено'
-                            );
-                        }
-                    );
+                                        console.log(
+                                            'Автозакрытие карточки звонка снова разрешено'
+                                        );
+                                    }
+                                );
+                            }
+                        )
+                        .catch(
+                            function (error) {
+
+                                console.error(
+                                    'Ошибка замены карточки звонка:',
+                                    error
+                                );
+
+
+                                showSuccess(
+                                    successText +
+                                    '. Стандартная карточка оставлена: ' +
+                                    error.message
+                                );
+
+
+                                BX24.placement.call(
+                                    'enableAutoClose',
+                                    {},
+
+                                    function () {
+
+                                        console.log(
+                                            'Автозакрытие карточки звонка снова разрешено'
+                                        );
+                                    }
+                                );
+                            }
+                        );
                 }
             );
         }
