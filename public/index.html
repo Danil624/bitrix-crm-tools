@@ -729,6 +729,36 @@ BX24.init(
         if (
             context.mode
             ===
+            'create_testdrive'
+        ) {
+
+            openExistingLeadTool(
+                '/testdrive.php',
+                context
+            );
+
+            return;
+        }
+
+
+        if (
+            context.mode
+            ===
+            'create_commercial'
+        ) {
+
+            openExistingLeadTool(
+                '/commercial.php',
+                context
+            );
+
+            return;
+        }
+
+
+        if (
+            context.mode
+            ===
             'testdrive_result'
         ) {
 
@@ -758,6 +788,22 @@ BX24.init(
  * ========================================
  */
 
+function isSupportedActionMode(
+    mode
+) {
+
+    return [
+        'testdrive_result',
+        'create_testdrive',
+        'create_commercial'
+    ].includes(
+        String(
+            mode || ''
+        )
+    );
+}
+
+
 function findActionParams(
     obj
 ) {
@@ -772,24 +818,15 @@ function findActionParams(
     }
 
 
-    /*
-     * Если mode уже здесь —
-     * нашли нужный объект.
-     */
-
     if (
-        obj.mode
-        ===
-        'testdrive_result'
+        isSupportedActionMode(
+            obj.mode
+        )
     ) {
 
         return obj;
     }
 
-
-    /*
-     * Частые варианты названия.
-     */
 
     const candidates = [
 
@@ -815,19 +852,15 @@ function findActionParams(
             typeof candidate
             === 'object'
             &&
-            candidate.mode
-            ===
-            'testdrive_result'
+            isSupportedActionMode(
+                candidate.mode
+            )
         ) {
 
             return candidate;
         }
     }
 
-
-    /*
-     * Рекурсивно ищем глубже.
-     */
 
     for (
         const key
@@ -848,9 +881,9 @@ function findActionParams(
 
 
             if (
-                found.mode
-                ===
-                'testdrive_result'
+                isSupportedActionMode(
+                    found.mode
+                )
             ) {
 
                 return found;
@@ -860,6 +893,90 @@ function findActionParams(
 
 
     return {};
+}
+
+
+function openExistingLeadTool(
+    path,
+    params
+) {
+
+    const leadId =
+        Number(
+            params.leadId
+            ||
+            params.entityId
+            ||
+            params.ID
+            ||
+            0
+        );
+
+
+    if (!leadId) {
+
+        document
+            .getElementById(
+                'defaultPage'
+            )
+            .style.display =
+                'block';
+
+
+        document
+            .getElementById(
+                'defaultPage'
+            )
+            .innerHTML =
+                '<h1>CRM-инструменты</h1>' +
+                '<p>Не удалось определить ID лида.</p>';
+
+        return;
+    }
+
+
+    try {
+
+        sessionStorage.setItem(
+            'crm_tool_lead_id',
+            String(
+                leadId
+            )
+        );
+
+    } catch (e) {
+
+        console.warn(
+            'sessionStorage недоступен:',
+            e
+        );
+    }
+
+
+    const separator =
+        path.includes('?')
+        ?
+        '&'
+        :
+        '?';
+
+
+    window.location.replace(
+        path +
+        separator +
+        'leadId=' +
+        encodeURIComponent(
+            leadId
+        ) +
+        '&entityId=' +
+        encodeURIComponent(
+            leadId
+        ) +
+        '&ID=' +
+        encodeURIComponent(
+            leadId
+        )
+    );
 }
 
 
