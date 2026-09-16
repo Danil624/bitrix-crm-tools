@@ -754,6 +754,182 @@ function syncCreateLeadButtonState() {
 
 /*
  * =========================================================
+ * СБРАСЫВАЕМ СОСТОЯНИЕ ПРИ НОВОМ ЗВОНКЕ
+ * =========================================================
+ */
+
+function resetCallSessionForNewCall(
+    newCallId
+) {
+
+    console.log(
+        'Новый звонок. Сбрасываем состояние CALL_CARD:',
+        callId,
+        '->',
+        newCallId
+    );
+
+
+    resultSaved =
+        false;
+
+    resultModeEnabled =
+        false;
+
+    leadCreationInProgress =
+        false;
+
+    activityBindingInProgress =
+        false;
+
+    crmActivityId =
+        0;
+
+    leadId =
+        0;
+
+    activityRetryCount =
+        0;
+
+
+    if (activityRetryTimer) {
+
+        clearTimeout(
+            activityRetryTimer
+        );
+
+        activityRetryTimer =
+            null;
+    }
+
+
+    if (keepAliveTimer) {
+
+        clearInterval(
+            keepAliveTimer
+        );
+
+        keepAliveTimer =
+            null;
+    }
+
+
+    const select =
+        document.getElementById(
+            'callResult'
+        );
+
+
+    if (select) {
+
+        select.value =
+            '';
+
+        if (
+            callResultFieldCode
+            &&
+            select.options.length > 1
+        ) {
+
+            select.disabled =
+                false;
+        }
+    }
+
+
+    const comment =
+        document.getElementById(
+            'callComment'
+        );
+
+
+    if (comment) {
+
+        comment.value =
+            '';
+    }
+
+
+    const saveButton =
+        document.getElementById(
+            'saveButton'
+        );
+
+
+    if (saveButton) {
+
+        saveButton.disabled =
+            true;
+
+        saveButton.textContent =
+            'Сохранить результат';
+    }
+
+
+    const message =
+        document.getElementById(
+            'message'
+        );
+
+
+    if (message) {
+
+        message.className =
+            'message';
+
+        message.textContent =
+            '';
+    }
+
+
+    const openLeadButton =
+        document.getElementById(
+            'openLeadButton'
+        );
+
+
+    if (openLeadButton) {
+
+        openLeadButton.style.display =
+            'none';
+    }
+
+
+    const leadInfo =
+        document.getElementById(
+            'leadInfo'
+        );
+
+
+    if (leadInfo) {
+
+        leadInfo.className =
+            'info';
+
+        leadInfo.textContent =
+            'Новый звонок. Определяем связанный лид...';
+    }
+
+
+    const bindingInfo =
+        document.getElementById(
+            'bindingInfo'
+        );
+
+
+    if (bindingInfo) {
+
+        bindingInfo.className =
+            'info';
+
+        bindingInfo.textContent =
+            'Проверяем привязку нового звонка...';
+    }
+}
+
+
+/*
+ * =========================================================
  * ОБРАБАТЫВАЕМ СТАТУС
  * =========================================================
  */
@@ -762,14 +938,42 @@ function applyCallStatus(
     status
 ) {
 
+    const newCallId =
+        String(
+            status.CALL_ID || ''
+        );
+
+
+    /*
+     * CALL_CARD может не перезагружаться между звонками.
+     * Поэтому при смене CALL_ID обязательно сбрасываем
+     * resultSaved и состояние предыдущего звонка.
+     */
+
+    if (
+        newCallId
+        &&
+        callId
+        &&
+        newCallId !== callId
+    ) {
+
+        resetCallSessionForNewCall(
+            newCallId
+        );
+    }
+
+
     callStatusData =
         status || {};
 
 
     callId =
-        String(
-            status.CALL_ID || callId || ''
-        );
+        newCallId
+        ||
+        callId
+        ||
+        '';
 
 
     phoneNumber =
@@ -4189,117 +4393,6 @@ async function replaceStandardCallWithCustomCard(
                     }
                 }
             }
-        },
-
-        phone: {
-
-            type:
-                'withTitle',
-
-            properties: {
-
-                title:
-                    'Телефон',
-
-                inline:
-                    true,
-
-                block: {
-
-                    type:
-                        'text',
-
-                    properties: {
-
-                        value:
-                            phone
-                    }
-                }
-            }
-        },
-
-        callResult: {
-
-            type:
-                'withTitle',
-
-            properties: {
-
-                title:
-                    'Результат',
-
-                inline:
-                    true,
-
-                block: {
-
-                    type:
-                        'text',
-
-                    properties: {
-
-                        value:
-                            resultText,
-
-                        bold:
-                            true
-                    }
-                }
-            }
-        },
-
-        duration: {
-
-            type:
-                'withTitle',
-
-            properties: {
-
-                title:
-                    'Длительность',
-
-                inline:
-                    true,
-
-                block: {
-
-                    type:
-                        'text',
-
-                    properties: {
-
-                        value:
-                            duration
-                    }
-                }
-            }
-        },
-
-        date: {
-
-            type:
-                'withTitle',
-
-            properties: {
-
-                title:
-                    'Дата и время',
-
-                inline:
-                    true,
-
-                block: {
-
-                    type:
-                        'text',
-
-                    properties: {
-
-                        value:
-                            callDate
-                    }
-                }
-            }
         }
     };
 
@@ -4389,21 +4482,7 @@ async function replaceStandardCallWithCustomCard(
                     header: {
 
                         title:
-                            directionTitle,
-
-                        tags: {
-
-                            result: {
-
-                                type:
-                                    getCallResultTagType(
-                                        resultText
-                                    ),
-
-                                title:
-                                    resultText
-                            }
-                        }
+                            directionTitle
                     },
 
                     body: {
