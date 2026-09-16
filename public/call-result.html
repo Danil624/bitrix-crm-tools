@@ -759,7 +759,8 @@ function syncCreateLeadButtonState() {
  */
 
 function resetCallSessionForNewCall(
-    newCallId
+    newCallId,
+    newPhoneNumber
 ) {
 
     console.log(
@@ -768,6 +769,37 @@ function resetCallSessionForNewCall(
         '->',
         newCallId
     );
+
+
+    /*
+     * Если следующий звонок идёт тому же клиенту/номеру,
+     * сохраняем уже известный leadId.
+     * Иначе CALL_CARD после первого звонка терял привязку
+     * и снова показывал «+ Создать лид».
+     */
+
+    const oldPhoneDigits =
+        String(phoneNumber || '')
+            .replace(/\D/g, '');
+
+    const newPhoneDigits =
+        String(newPhoneNumber || '')
+            .replace(/\D/g, '');
+
+    const preservedLeadId =
+        (
+            leadId > 0
+            &&
+            oldPhoneDigits.length >= 10
+            &&
+            newPhoneDigits.length >= 10
+            &&
+            oldPhoneDigits === newPhoneDigits
+        )
+        ?
+        leadId
+        :
+        0;
 
 
     resultSaved =
@@ -786,7 +818,7 @@ function resetCallSessionForNewCall(
         0;
 
     leadId =
-        0;
+        preservedLeadId;
 
     activityRetryCount =
         0;
@@ -903,11 +935,24 @@ function resetCallSessionForNewCall(
 
     if (leadInfo) {
 
-        leadInfo.className =
-            'info';
+        if (leadId > 0) {
 
-        leadInfo.textContent =
-            'Новый звонок. Определяем связанный лид...';
+            leadInfo.className =
+                'info ok';
+
+            leadInfo.textContent =
+                'Повторный звонок. Используем связанный лид #' +
+                leadId +
+                '.';
+
+        } else {
+
+            leadInfo.className =
+                'info';
+
+            leadInfo.textContent =
+                'Новый звонок. Определяем связанный лид...';
+        }
     }
 
 
@@ -944,6 +989,12 @@ function applyCallStatus(
         );
 
 
+    const newPhoneNumber =
+        String(
+            status.PHONE_NUMBER || ''
+        );
+
+
     /*
      * CALL_CARD может не перезагружаться между звонками.
      * Поэтому при смене CALL_ID обязательно сбрасываем
@@ -959,7 +1010,8 @@ function applyCallStatus(
     ) {
 
         resetCallSessionForNewCall(
-            newCallId
+            newCallId,
+            newPhoneNumber
         );
     }
 
