@@ -3733,28 +3733,45 @@ async function replaceStandardCallWithCustomCard(
     }
 
 
+    /*
+     * CRM_ACTIVITY_ID стандартного звонка может появиться
+     * с задержкой или вообще не попасть в CALL_CARD.
+     * Поэтому наличие стандартного дела НЕ является
+     * обязательным условием для создания нашей карточки.
+     */
+
     const originalActivityId =
         await waitForCrmActivityId(
             5000
         );
 
 
-    if (!originalActivityId) {
+    let activity = {};
 
-        throw new Error(
-            'Bitrix24 не передал CRM_ACTIVITY_ID звонка.'
-        );
+
+    if (originalActivityId) {
+
+        try {
+
+            activity =
+                await bxCallPromise(
+                    'crm.activity.get',
+                    {
+                        id:
+                            originalActivityId
+                    }
+                ) || {};
+
+        } catch (error) {
+
+            console.warn(
+                'Не удалось получить стандартное дело звонка:',
+                error
+            );
+
+            activity = {};
+        }
     }
-
-
-    const activity =
-        await bxCallPromise(
-            'crm.activity.get',
-            {
-                id:
-                    originalActivityId
-            }
-        );
 
 
     const lead =
@@ -3767,18 +3784,36 @@ async function replaceStandardCallWithCustomCard(
         );
 
 
+    const hasDirection =
+        activity.DIRECTION !== undefined
+        &&
+        activity.DIRECTION !== null
+        &&
+        String(activity.DIRECTION) !== '';
+
+
     const incoming =
+        hasDirection
+        ?
         String(
-            activity.DIRECTION || ''
-        ) === '1';
+            activity.DIRECTION
+        ) === '1'
+        :
+        false;
 
 
     const directionTitle =
-        incoming
+        hasDirection
         ?
-        'Входящий звонок'
+        (
+            incoming
+            ?
+            'Входящий звонок'
+            :
+            'Исходящий звонок'
+        )
         :
-        'Исходящий звонок';
+        'Звонок';
 
 
     const clientTitle =
@@ -3797,15 +3832,24 @@ async function replaceStandardCallWithCustomCard(
     const callDate =
         formatCallDate(
             activity.START_TIME ||
-            activity.CREATED
+            activity.CREATED ||
+            new Date().toISOString()
         );
 
 
     const duration =
+        (
+            activity.START_TIME
+            &&
+            activity.END_TIME
+        )
+        ?
         formatCallDuration(
             activity.START_TIME,
             activity.END_TIME
-        );
+        )
+        :
+        '—';
 
 
     const responsibleId =
@@ -3815,10 +3859,21 @@ async function replaceStandardCallWithCustomCard(
         );
 
 
+    const originToken =
+        originalActivityId
+        ||
+        callId
+        ||
+        Date.now();
+
+
     const fields = {
 
-        typeId:
-            'CONFIGURABLE',
+        /*
+         * typeId специально НЕ задаём.
+         * Тогда Bitrix24 использует стандартный
+         * тип CONFIGURABLE для приложения.
+         */
 
         completed:
             true,
@@ -3831,7 +3886,7 @@ async function replaceStandardCallWithCustomCard(
 
         originId:
             'CALL_' +
-            originalActivityId
+            originToken
     };
 
 
@@ -4084,28 +4139,31 @@ async function replaceStandardCallWithCustomCard(
     if (!customActivityId) {
 
         throw new Error(
-            'Bitrix24 создал карточку, но не вернул её ID.'
+            'Bitrix24 не вернул ID новой карточки звонка.'
         );
     }
 
 
-    try {
+    /*
+     * Дополнительно убеждаемся, что карточка реально
+     * существует в Bitrix24, и только после этого
+     * пробуем удалить стандартный звонок.
+     */
 
-        await bxCallPromise(
-            'crm.activity.delete',
-            {
-                id:
-                    originalActivityId
-            }
-        );
+    await bxCallPromise(
+        'crm.activity.configurable.get',
+        {
+            id:
+                customActivityId
+        }
+    );
 
-    } catch (deleteError) {
 
-        /*
-         * Не оставляем две карточки.
-         * Если стандартную удалить не удалось,
-         * удаляем созданную кастомную обратно.
-         */
+    let standardDeleted =
+        false;
+
+
+    if (originalActivityId) {
 
         try {
 
@@ -4113,25 +4171,34 @@ async function replaceStandardCallWithCustomCard(
                 'crm.activity.delete',
                 {
                     id:
-                        customActivityId
+                        originalActivityId
                 }
             );
 
-        } catch (rollbackError) {
+
+            standardDeleted =
+                true;
+
+        } catch (deleteError) {
+
+            /*
+             * Кастомную карточку больше НЕ удаляем.
+             * Главное — не остаться вообще без записи.
+             */
 
             console.warn(
-                'Не удалось откатить кастомную карточку:',
-                rollbackError
+                'Кастомная карточка создана, но стандартный звонок удалить не удалось:',
+                deleteError
             );
         }
-
-
-        throw deleteError;
     }
 
 
-    crmActivityId =
-        0;
+    if (standardDeleted) {
+
+        crmActivityId =
+            0;
+    }
 
 
     return {
@@ -4140,10 +4207,13 @@ async function replaceStandardCallWithCustomCard(
             customActivityId,
 
         deletedActivityId:
+            standardDeleted
+            ?
             originalActivityId
+            :
+            0
     };
 }
-
 
 /*
  * =========================================================
@@ -4400,7 +4470,7 @@ function saveCallResult() {
 
                                 showSuccess(
                                     successText +
-                                    '. Стандартная карточка оставлена: ' +
+                                    '. Не удалось создать новую карточку звонка: ' +
                                     error.message
                                 );
 
