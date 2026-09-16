@@ -3887,6 +3887,41 @@ async function getCallStatistic(
 }
 
 
+function getCallBodyLogoCode(
+    directionTitle
+) {
+
+    if (
+        directionTitle ===
+        'Входящий звонок'
+    ) {
+
+        return 'call-incoming';
+    }
+
+
+    if (
+        directionTitle ===
+        'Исходящий звонок'
+    ) {
+
+        return 'call-outgoing';
+    }
+
+
+    if (
+        directionTitle ===
+        'Обратный звонок'
+    ) {
+
+        return 'call-incoming';
+    }
+
+
+    return 'call-incoming';
+}
+
+
 async function replaceStandardCallWithCustomCard(
     resultText,
     callComment = ''
@@ -4015,6 +4050,12 @@ async function replaceStandardCallWithCustomCard(
         directionTitle =
             'Обратный звонок';
     }
+
+
+    const callLogoCode =
+        getCallBodyLogoCode(
+            directionTitle
+        );
 
 
     const clientTitle =
@@ -4369,7 +4410,7 @@ async function replaceStandardCallWithCustomCard(
 
                         logo: {
                             code:
-                                'call-incoming'
+                                callLogoCode
                         },
 
                         blocks:
@@ -4380,10 +4421,10 @@ async function replaceStandardCallWithCustomCard(
 
                         buttons: {
 
-                            openLead: {
+                            testDrive: {
 
                                 title:
-                                    'Открыть лид',
+                                    'Создать тест-драйв',
 
                                 type:
                                     'primary',
@@ -4391,12 +4432,70 @@ async function replaceStandardCallWithCustomCard(
                                 action: {
 
                                     type:
-                                        'redirect',
+                                        'openRestApp',
 
-                                    uri:
-                                        '/crm/lead/details/' +
-                                        leadId +
-                                        '/'
+                                    actionParams: {
+
+                                        mode:
+                                            'create_testdrive',
+
+                                        ID:
+                                            leadId,
+
+                                        leadId:
+                                            leadId,
+
+                                        entityId:
+                                            leadId
+                                    },
+
+                                    sliderParams: {
+
+                                        title:
+                                            'Тест-драйв',
+
+                                        width:
+                                            760
+                                    }
+                                }
+                            },
+
+                            commercial: {
+
+                                title:
+                                    'Создать КП',
+
+                                type:
+                                    'secondary',
+
+                                action: {
+
+                                    type:
+                                        'openRestApp',
+
+                                    actionParams: {
+
+                                        mode:
+                                            'create_commercial',
+
+                                        ID:
+                                            leadId,
+
+                                        leadId:
+                                            leadId,
+
+                                        entityId:
+                                            leadId
+                                    },
+
+                                    sliderParams: {
+
+                                        title:
+                                            'КП',
+
+                                        width:
+                                            760
+                                    }
                                 }
                             }
                         }
