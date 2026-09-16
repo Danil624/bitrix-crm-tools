@@ -134,7 +134,8 @@
             color: #d93025;
         }
 
-        select {
+        select,
+        textarea {
             width: 100%;
 
             padding: 11px 12px;
@@ -149,8 +150,20 @@
             outline: none;
         }
 
-        select:focus {
+        select:focus,
+        textarea:focus {
             border-color: #2fc6f6;
+        }
+
+        textarea {
+            min-height: 86px;
+            margin-top: 0;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .comment-group {
+            margin-top: 16px;
         }
 
         button {
@@ -294,6 +307,18 @@
                 Загружаем варианты результата...
             </option>
         </select>
+
+
+        <div class="comment-group">
+            <label for="callComment">
+                О чём был разговор
+            </label>
+
+            <textarea
+                id="callComment"
+                placeholder="Коротко зафиксируйте, что обсудили с клиентом и о чём договорились"
+            ></textarea>
+        </div>
 
 
         <button
@@ -3721,8 +3746,150 @@ function getCallResultTagType(
 }
 
 
+function formatCallDurationSeconds(
+    value
+) {
+
+    const totalSeconds =
+        Math.max(
+            0,
+            Number(value || 0)
+        );
+
+
+    if (!Number.isFinite(totalSeconds)) {
+        return '—';
+    }
+
+
+    const minutes =
+        Math.floor(
+            totalSeconds / 60
+        );
+
+
+    const seconds =
+        Math.round(
+            totalSeconds % 60
+        );
+
+
+    if (!minutes) {
+        return seconds + ' сек';
+    }
+
+
+    return (
+        minutes +
+        ' мин ' +
+        String(seconds).padStart(2, '0') +
+        ' сек'
+    );
+}
+
+
+async function getCallStatistic(
+    originalActivityId = 0
+) {
+
+    const filter = {};
+
+
+    if (callId) {
+
+        filter.CALL_ID =
+            callId;
+
+    } else if (originalActivityId) {
+
+        filter.CRM_ACTIVITY_ID =
+            originalActivityId;
+
+    } else {
+
+        return null;
+    }
+
+
+    /*
+     * Запись разговора иногда появляется
+     * не мгновенно после завершения звонка.
+     * Несколько секунд ждём статистику телефонии.
+     */
+
+    for (
+        let attempt = 0;
+        attempt < 10;
+        attempt++
+    ) {
+
+        try {
+
+            const rows =
+                await bxCallPromise(
+                    'voximplant.statistic.get',
+                    {
+                        FILTER:
+                            filter,
+
+                        SORT:
+                            'ID',
+
+                        ORDER:
+                            'DESC'
+                    }
+                );
+
+
+            const items =
+                Array.isArray(rows)
+                ?
+                rows
+                :
+                [];
+
+
+            if (items.length) {
+
+                const row =
+                    items[0] || {};
+
+
+                if (
+                    row.CALL_RECORD_URL
+                    ||
+                    attempt === 9
+                ) {
+
+                    return row;
+                }
+            }
+
+        } catch (error) {
+
+            console.warn(
+                'Не удалось получить статистику звонка. ' +
+                'Для плеера приложению нужен доступ к телефонии:',
+                error
+            );
+
+            return null;
+        }
+
+
+        await waitMs(
+            500
+        );
+    }
+
+
+    return null;
+}
+
+
 async function replaceStandardCallWithCustomCard(
-    resultText
+    resultText,
+    callComment = ''
 ) {
 
     if (!leadId) {
@@ -3774,6 +3941,18 @@ async function replaceStandardCallWithCustomCard(
     }
 
 
+    const callStatistic =
+        await getCallStatistic(
+            originalActivityId
+        );
+
+
+    const recordUrl =
+        String(
+            callStatistic?.CALL_RECORD_URL || ''
+        ).trim();
+
+
     const lead =
         await bxCallPromise(
             'crm.lead.get',
@@ -3802,7 +3981,7 @@ async function replaceStandardCallWithCustomCard(
         false;
 
 
-    const directionTitle =
+    let directionTitle =
         hasDirection
         ?
         (
@@ -3814,6 +3993,28 @@ async function replaceStandardCallWithCustomCard(
         )
         :
         'Звонок';
+
+
+    const callType =
+        String(
+            callStatistic?.CALL_TYPE || ''
+        );
+
+
+    if (callType === '1') {
+        directionTitle =
+            'Исходящий звонок';
+    } else if (
+        callType === '2'
+        ||
+        callType === '3'
+    ) {
+        directionTitle =
+            'Входящий звонок';
+    } else if (callType === '4') {
+        directionTitle =
+            'Обратный звонок';
+    }
 
 
     const clientTitle =
@@ -3831,6 +4032,7 @@ async function replaceStandardCallWithCustomCard(
 
     const callDate =
         formatCallDate(
+            callStatistic?.CALL_START_DATE ||
             activity.START_TIME ||
             activity.CREATED ||
             new Date().toISOString()
@@ -3838,6 +4040,14 @@ async function replaceStandardCallWithCustomCard(
 
 
     const duration =
+        callStatistic?.CALL_DURATION !== undefined
+        &&
+        callStatistic?.CALL_DURATION !== null
+        ?
+        formatCallDurationSeconds(
+            callStatistic.CALL_DURATION
+        )
+        :
         (
             activity.START_TIME
             &&
@@ -3897,6 +4107,224 @@ async function replaceStandardCallWithCustomCard(
     }
 
 
+    const blocks = {
+
+        client: {
+
+            type:
+                'withTitle',
+
+            properties: {
+
+                title:
+                    'Клиент',
+
+                inline:
+                    true,
+
+                block: {
+
+                    type:
+                        'link',
+
+                    properties: {
+
+                        text:
+                            clientTitle,
+
+                        bold:
+                            true,
+
+                        action: {
+
+                            type:
+                                'redirect',
+
+                            uri:
+                                '/crm/lead/details/' +
+                                leadId +
+                                '/'
+                        }
+                    }
+                }
+            }
+        },
+
+        phone: {
+
+            type:
+                'withTitle',
+
+            properties: {
+
+                title:
+                    'Телефон',
+
+                inline:
+                    true,
+
+                block: {
+
+                    type:
+                        'text',
+
+                    properties: {
+
+                        value:
+                            phone
+                    }
+                }
+            }
+        },
+
+        callResult: {
+
+            type:
+                'withTitle',
+
+            properties: {
+
+                title:
+                    'Результат',
+
+                inline:
+                    true,
+
+                block: {
+
+                    type:
+                        'text',
+
+                    properties: {
+
+                        value:
+                            resultText,
+
+                        bold:
+                            true
+                    }
+                }
+            }
+        },
+
+        duration: {
+
+            type:
+                'withTitle',
+
+            properties: {
+
+                title:
+                    'Длительность',
+
+                inline:
+                    true,
+
+                block: {
+
+                    type:
+                        'text',
+
+                    properties: {
+
+                        value:
+                            duration
+                    }
+                }
+            }
+        },
+
+        date: {
+
+            type:
+                'withTitle',
+
+            properties: {
+
+                title:
+                    'Дата и время',
+
+                inline:
+                    true,
+
+                block: {
+
+                    type:
+                        'text',
+
+                    properties: {
+
+                        value:
+                            callDate
+                    }
+                }
+            }
+        }
+    };
+
+
+    if (callComment) {
+
+        blocks.comment = {
+
+            type:
+                'withTitle',
+
+            properties: {
+
+                title:
+                    'Комментарий',
+
+                inline:
+                    false,
+
+                block: {
+
+                    type:
+                        'text',
+
+                    properties: {
+
+                        value:
+                            callComment,
+
+                        multiline:
+                            true
+                    }
+                }
+            }
+        };
+    }
+
+
+    if (recordUrl) {
+
+        blocks.recording = {
+
+            type:
+                'link',
+
+            properties: {
+
+                text:
+                    '▶',
+
+                bold:
+                    true,
+
+                action: {
+
+                    type:
+                        'redirect',
+
+                    uri:
+                        recordUrl
+                }
+            }
+        };
+    }
+
+
     const customActivity =
         await bxCallPromise(
             'crm.activity.configurable.add',
@@ -3944,160 +4372,8 @@ async function replaceStandardCallWithCustomCard(
                                 'call-incoming'
                         },
 
-                        blocks: {
-
-                            client: {
-
-                                type:
-                                    'withTitle',
-
-                                properties: {
-
-                                    title:
-                                        'Клиент',
-
-                                    inline:
-                                        true,
-
-                                    block: {
-
-                                        type:
-                                            'link',
-
-                                        properties: {
-
-                                            text:
-                                                clientTitle,
-
-                                            bold:
-                                                true,
-
-                                            action: {
-
-                                                type:
-                                                    'redirect',
-
-                                                uri:
-                                                    '/crm/lead/details/' +
-                                                    leadId +
-                                                    '/'
-                                            }
-                                        }
-                                    }
-                                }
-                            },
-
-                            phone: {
-
-                                type:
-                                    'withTitle',
-
-                                properties: {
-
-                                    title:
-                                        'Телефон',
-
-                                    inline:
-                                        true,
-
-                                    block: {
-
-                                        type:
-                                            'text',
-
-                                        properties: {
-
-                                            value:
-                                                phone
-                                        }
-                                    }
-                                }
-                            },
-
-                            callResult: {
-
-                                type:
-                                    'withTitle',
-
-                                properties: {
-
-                                    title:
-                                        'Результат',
-
-                                    inline:
-                                        true,
-
-                                    block: {
-
-                                        type:
-                                            'text',
-
-                                        properties: {
-
-                                            value:
-                                                resultText,
-
-                                            bold:
-                                                true
-                                        }
-                                    }
-                                }
-                            },
-
-                            duration: {
-
-                                type:
-                                    'withTitle',
-
-                                properties: {
-
-                                    title:
-                                        'Длительность',
-
-                                    inline:
-                                        true,
-
-                                    block: {
-
-                                        type:
-                                            'text',
-
-                                        properties: {
-
-                                            value:
-                                                duration
-                                        }
-                                    }
-                                }
-                            },
-
-                            date: {
-
-                                type:
-                                    'withTitle',
-
-                                properties: {
-
-                                    title:
-                                        'Дата и время',
-
-                                    inline:
-                                        true,
-
-                                    block: {
-
-                                        type:
-                                            'text',
-
-                                        properties: {
-
-                                            value:
-                                                callDate
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        blocks:
+                            blocks
                     },
 
                     footer: {
@@ -4306,6 +4582,14 @@ function saveCallResult() {
     }
 
 
+    const callComment =
+        String(
+            document.getElementById(
+                'callComment'
+            )?.value || ''
+        ).trim();
+
+
     setLoading(
         true
     );
@@ -4435,7 +4719,8 @@ function saveCallResult() {
                      */
 
                     replaceStandardCallWithCustomCard(
-                        selectedText
+                        selectedText,
+                        callComment
                     )
                         .then(
                             function () {
