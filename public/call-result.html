@@ -392,6 +392,10 @@ let statusPollAttempts = 0;
 
 let statusRequestInProgress = false;
 
+let existingLeadLookupInProgress = false;
+
+let existingLeadLookupFinishedCallId = '';
+
 
 /*
  * =========================================================
@@ -816,6 +820,12 @@ function resetCallSessionForNewCall(
     activityRetryCount =
         0;
 
+    existingLeadLookupInProgress =
+        false;
+
+    existingLeadLookupFinishedCallId =
+        '';
+
 
     if (activityRetryTimer) {
 
@@ -1065,7 +1075,9 @@ function applyCallStatus(
 
     } else if (!leadId) {
 
-        showCreateLeadButton();
+        tryResolveExistingLeadForCurrentCall(
+            status
+        );
     }
 
 
@@ -1083,6 +1095,363 @@ function applyCallStatus(
 
     handleCallState(
         currentCallState
+    );
+}
+
+
+/*
+ * =========================================================
+ * ЕСЛИ BITRIX НЕ ПЕРЕДАЛ LEAD В CALL_CARD,
+ * ИЩЕМ УЖЕ СУЩЕСТВУЮЩИЙ АКТИВНЫЙ ЛИД КЛИЕНТА
+ * =========================================================
+ *
+ * Это нужно для повторных звонков. Новый iframe CALL_CARD
+ * не помнит leadId предыдущего звонка, поэтому восстанавливаем
+ * его через связанный контакт или телефон клиента.
+ */
+
+function tryResolveExistingLeadForCurrentCall(
+    status
+) {
+
+    if (
+        leadId
+        ||
+        existingLeadLookupInProgress
+    ) {
+        return;
+    }
+
+
+    if (
+        !callId
+        ||
+        existingLeadLookupFinishedCallId === callId
+    ) {
+
+        if (!leadId) {
+            showCreateLeadButton();
+        }
+
+        return;
+    }
+
+
+    existingLeadLookupInProgress =
+        true;
+
+
+    document.getElementById(
+        'leadInfo'
+    ).textContent =
+        'Ищем существующий лид клиента...';
+
+
+    function finishWithoutLead() {
+
+        existingLeadLookupInProgress =
+            false;
+
+        existingLeadLookupFinishedCallId =
+            callId;
+
+        if (!leadId) {
+            showCreateLeadButton();
+        }
+    }
+
+
+    function finishWithLead(
+        foundLeadId
+    ) {
+
+        existingLeadLookupInProgress =
+            false;
+
+        existingLeadLookupFinishedCallId =
+            callId;
+
+
+        foundLeadId =
+            normalizePositiveId(
+                foundLeadId
+            );
+
+
+        if (!foundLeadId) {
+            finishWithoutLead();
+            return;
+        }
+
+
+        setLead(
+            foundLeadId,
+            false
+        );
+
+
+        ensureCallActivityBinding();
+    }
+
+
+    function findLeadByContactId(
+        contactId
+    ) {
+
+        contactId =
+            normalizePositiveId(
+                contactId
+            );
+
+
+        if (!contactId) {
+            finishWithoutLead();
+            return;
+        }
+
+
+        BX24.callMethod(
+            'crm.lead.list',
+
+            {
+                order: {
+                    ID:
+                        'DESC'
+                },
+
+                filter: {
+                    CONTACT_ID:
+                        contactId
+                },
+
+                select: [
+                    'ID',
+                    'TITLE',
+                    'STATUS_ID',
+                    'STATUS_SEMANTIC_ID'
+                ]
+            },
+
+            function (result) {
+
+                if (result.error()) {
+
+                    console.warn(
+                        'Не удалось найти лиды контакта:',
+                        result.error(),
+                        result.error_description()
+                    );
+
+                    finishWithoutLead();
+                    return;
+                }
+
+
+                const leads =
+                    result.data() || [];
+
+
+                if (!leads.length) {
+                    finishWithoutLead();
+                    return;
+                }
+
+
+                const hasSemanticData =
+                    leads.some(
+                        function (item) {
+                            return String(
+                                item.STATUS_SEMANTIC_ID || ''
+                            ).trim() !== '';
+                        }
+                    );
+
+
+                let targetLead =
+                    null;
+
+
+                if (hasSemanticData) {
+
+                    targetLead =
+                        leads.find(
+                            function (item) {
+
+                                const semantic =
+                                    String(
+                                        item.STATUS_SEMANTIC_ID || ''
+                                    )
+                                    .trim()
+                                    .toUpperCase();
+
+
+                                return (
+                                    semantic !== 'S'
+                                    &&
+                                    semantic !== 'F'
+                                );
+                            }
+                        ) || null;
+
+                } else {
+
+                    /*
+                     * На некоторых порталах STATUS_SEMANTIC_ID
+                     * в crm.lead.list не приходит. Тогда берём
+                     * самый свежий связанный лид.
+                     */
+
+                    targetLead =
+                        leads[0] || null;
+                }
+
+
+                if (!targetLead) {
+                    finishWithoutLead();
+                    return;
+                }
+
+
+                finishWithLead(
+                    targetLead.ID
+                );
+            }
+        );
+    }
+
+
+    /*
+     * Сначала пробуем взять CONTACT прямо из CALL_CARD.
+     */
+
+    const mainType =
+        String(
+            status?.CRM_ENTITY_TYPE || ''
+        ).toUpperCase();
+
+
+    const mainId =
+        normalizePositiveId(
+            status?.CRM_ENTITY_ID
+        );
+
+
+    if (
+        mainType === 'CONTACT'
+        &&
+        mainId
+    ) {
+
+        findLeadByContactId(
+            mainId
+        );
+
+        return;
+    }
+
+
+    const bindings =
+        Array.isArray(
+            status?.CRM_BINDINGS
+        )
+        ?
+        status.CRM_BINDINGS
+        :
+        [];
+
+
+    const contactBinding =
+        bindings.find(
+            function (binding) {
+
+                return (
+                    String(
+                        binding.ENTITY_TYPE || ''
+                    ).toUpperCase() === 'CONTACT'
+                    &&
+                    normalizePositiveId(
+                        binding.ENTITY_ID
+                    ) > 0
+                );
+            }
+        );
+
+
+    if (contactBinding) {
+
+        findLeadByContactId(
+            contactBinding.ENTITY_ID
+        );
+
+        return;
+    }
+
+
+    /*
+     * Если CALL_CARD передал только номер телефона —
+     * находим контакт по телефону.
+     */
+
+    if (!isUsablePhone(phoneNumber)) {
+        finishWithoutLead();
+        return;
+    }
+
+
+    BX24.callMethod(
+        'crm.duplicate.findbycomm',
+
+        {
+            entity_type:
+                'CONTACT',
+
+            type:
+                'PHONE',
+
+            values: [
+                phoneNumber
+            ]
+        },
+
+        function (result) {
+
+            if (result.error()) {
+
+                console.warn(
+                    'Не удалось найти контакт по телефону:',
+                    result.error(),
+                    result.error_description()
+                );
+
+                finishWithoutLead();
+                return;
+            }
+
+
+            const data =
+                result.data() || {};
+
+
+            const contactIds =
+                Array.isArray(
+                    data.CONTACT
+                )
+                ?
+                data.CONTACT
+                :
+                [];
+
+
+            if (!contactIds.length) {
+                finishWithoutLead();
+                return;
+            }
+
+
+            findLeadByContactId(
+                contactIds[0]
+            );
+        }
     );
 }
 
