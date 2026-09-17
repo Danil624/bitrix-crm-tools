@@ -394,7 +394,11 @@ let statusRequestInProgress = false;
 
 let existingLeadLookupInProgress = false;
 
-let existingLeadLookupFinishedCallId = '';
+let existingLeadLookupDoneForCallId = '';
+
+let resultOptionsLoaded = false;
+
+let allowAutoClose = false;
 
 
 /*
@@ -419,6 +423,14 @@ BX24.init(function () {
             e
         );
     }
+
+
+    /*
+     * Блокируем автозакрытие СРАЗУ при открытии CALL_CARD.
+     * Иначе Bitrix24 успевает закрыть форму в момент,
+     * когда пользователь кладёт трубку.
+     */
+    startAutoCloseGuard();
 
 
     /*
@@ -518,16 +530,12 @@ BX24.init(function () {
 
             function () {
 
-                if (
-                    resultModeEnabled
-                    &&
-                    !resultSaved
-                ) {
+                if (!allowAutoClose) {
 
-                    blockAutoClose();
+                    startAutoCloseGuard();
 
                     showError(
-                        'Сначала выберите и сохраните результат звонка.'
+                        'Сначала завершите обработку звонка и выберите результат.'
                     );
                 }
             }
@@ -717,6 +725,16 @@ function syncCreateLeadButtonState() {
 
 
     if (
+        existingLeadLookupInProgress
+    ) {
+
+        button.disabled =
+            true;
+
+        button.textContent =
+            'Ищем существующий лид...';
+
+    } else if (
         callId
         &&
         !leadCreationInProgress
@@ -805,6 +823,15 @@ function resetCallSessionForNewCall(
     resultModeEnabled =
         false;
 
+    allowAutoClose =
+        false;
+
+    existingLeadLookupInProgress =
+        false;
+
+    existingLeadLookupDoneForCallId =
+        '';
+
     leadCreationInProgress =
         false;
 
@@ -819,12 +846,6 @@ function resetCallSessionForNewCall(
 
     activityRetryCount =
         0;
-
-    existingLeadLookupInProgress =
-        false;
-
-    existingLeadLookupFinishedCallId =
-        '';
 
 
     if (activityRetryTimer) {
@@ -849,6 +870,13 @@ function resetCallSessionForNewCall(
     }
 
 
+    /*
+     * Новый CALL_ID = новый жизненный цикл звонка.
+     * Сразу снова блокируем автозакрытие.
+     */
+    startAutoCloseGuard();
+
+
     const select =
         document.getElementById(
             'callResult'
@@ -860,15 +888,12 @@ function resetCallSessionForNewCall(
         select.value =
             '';
 
-        if (
-            callResultFieldCode
-            &&
-            select.options.length > 1
-        ) {
-
-            select.disabled =
-                false;
-        }
+        resultOptionsLoaded =
+            (
+                callResultFieldCode
+                &&
+                select.options.length > 1
+            );
     }
 
 
@@ -973,6 +998,9 @@ function resetCallSessionForNewCall(
         bindingInfo.textContent =
             'Проверяем привязку нового звонка...';
     }
+
+
+    syncResultSelectState();
 }
 
 
@@ -1043,10 +1071,21 @@ function applyCallStatus(
         );
 
 
-    crmActivityId =
+    const nextCrmActivityId =
         normalizePositiveId(
             status.CRM_ACTIVITY_ID
         );
+
+    /*
+     * В конце звонка Bitrix24 иногда на мгновение
+     * отдаёт CRM_ACTIVITY_ID пустым. Не теряем уже
+     * полученный ID стандартного дела.
+     */
+    if (nextCrmActivityId) {
+
+        crmActivityId =
+            nextCrmActivityId;
+    }
 
 
     syncCreateLeadButtonState();
@@ -1073,11 +1112,17 @@ function applyCallStatus(
             false
         );
 
+        existingLeadLookupDoneForCallId =
+            callId;
+
     } else if (!leadId) {
 
-        tryResolveExistingLeadForCurrentCall(
-            status
-        );
+        /*
+         * Для повторного звонка CALL_ID уже другой,
+         * поэтому искать лид по CALL_ID нельзя.
+         * Ищем активный лид по номеру телефона.
+         */
+        resolveExistingLeadForCurrentCall();
     }
 
 
@@ -1095,363 +1140,6 @@ function applyCallStatus(
 
     handleCallState(
         currentCallState
-    );
-}
-
-
-/*
- * =========================================================
- * ЕСЛИ BITRIX НЕ ПЕРЕДАЛ LEAD В CALL_CARD,
- * ИЩЕМ УЖЕ СУЩЕСТВУЮЩИЙ АКТИВНЫЙ ЛИД КЛИЕНТА
- * =========================================================
- *
- * Это нужно для повторных звонков. Новый iframe CALL_CARD
- * не помнит leadId предыдущего звонка, поэтому восстанавливаем
- * его через связанный контакт или телефон клиента.
- */
-
-function tryResolveExistingLeadForCurrentCall(
-    status
-) {
-
-    if (
-        leadId
-        ||
-        existingLeadLookupInProgress
-    ) {
-        return;
-    }
-
-
-    if (
-        !callId
-        ||
-        existingLeadLookupFinishedCallId === callId
-    ) {
-
-        if (!leadId) {
-            showCreateLeadButton();
-        }
-
-        return;
-    }
-
-
-    existingLeadLookupInProgress =
-        true;
-
-
-    document.getElementById(
-        'leadInfo'
-    ).textContent =
-        'Ищем существующий лид клиента...';
-
-
-    function finishWithoutLead() {
-
-        existingLeadLookupInProgress =
-            false;
-
-        existingLeadLookupFinishedCallId =
-            callId;
-
-        if (!leadId) {
-            showCreateLeadButton();
-        }
-    }
-
-
-    function finishWithLead(
-        foundLeadId
-    ) {
-
-        existingLeadLookupInProgress =
-            false;
-
-        existingLeadLookupFinishedCallId =
-            callId;
-
-
-        foundLeadId =
-            normalizePositiveId(
-                foundLeadId
-            );
-
-
-        if (!foundLeadId) {
-            finishWithoutLead();
-            return;
-        }
-
-
-        setLead(
-            foundLeadId,
-            false
-        );
-
-
-        ensureCallActivityBinding();
-    }
-
-
-    function findLeadByContactId(
-        contactId
-    ) {
-
-        contactId =
-            normalizePositiveId(
-                contactId
-            );
-
-
-        if (!contactId) {
-            finishWithoutLead();
-            return;
-        }
-
-
-        BX24.callMethod(
-            'crm.lead.list',
-
-            {
-                order: {
-                    ID:
-                        'DESC'
-                },
-
-                filter: {
-                    CONTACT_ID:
-                        contactId
-                },
-
-                select: [
-                    'ID',
-                    'TITLE',
-                    'STATUS_ID',
-                    'STATUS_SEMANTIC_ID'
-                ]
-            },
-
-            function (result) {
-
-                if (result.error()) {
-
-                    console.warn(
-                        'Не удалось найти лиды контакта:',
-                        result.error(),
-                        result.error_description()
-                    );
-
-                    finishWithoutLead();
-                    return;
-                }
-
-
-                const leads =
-                    result.data() || [];
-
-
-                if (!leads.length) {
-                    finishWithoutLead();
-                    return;
-                }
-
-
-                const hasSemanticData =
-                    leads.some(
-                        function (item) {
-                            return String(
-                                item.STATUS_SEMANTIC_ID || ''
-                            ).trim() !== '';
-                        }
-                    );
-
-
-                let targetLead =
-                    null;
-
-
-                if (hasSemanticData) {
-
-                    targetLead =
-                        leads.find(
-                            function (item) {
-
-                                const semantic =
-                                    String(
-                                        item.STATUS_SEMANTIC_ID || ''
-                                    )
-                                    .trim()
-                                    .toUpperCase();
-
-
-                                return (
-                                    semantic !== 'S'
-                                    &&
-                                    semantic !== 'F'
-                                );
-                            }
-                        ) || null;
-
-                } else {
-
-                    /*
-                     * На некоторых порталах STATUS_SEMANTIC_ID
-                     * в crm.lead.list не приходит. Тогда берём
-                     * самый свежий связанный лид.
-                     */
-
-                    targetLead =
-                        leads[0] || null;
-                }
-
-
-                if (!targetLead) {
-                    finishWithoutLead();
-                    return;
-                }
-
-
-                finishWithLead(
-                    targetLead.ID
-                );
-            }
-        );
-    }
-
-
-    /*
-     * Сначала пробуем взять CONTACT прямо из CALL_CARD.
-     */
-
-    const mainType =
-        String(
-            status?.CRM_ENTITY_TYPE || ''
-        ).toUpperCase();
-
-
-    const mainId =
-        normalizePositiveId(
-            status?.CRM_ENTITY_ID
-        );
-
-
-    if (
-        mainType === 'CONTACT'
-        &&
-        mainId
-    ) {
-
-        findLeadByContactId(
-            mainId
-        );
-
-        return;
-    }
-
-
-    const bindings =
-        Array.isArray(
-            status?.CRM_BINDINGS
-        )
-        ?
-        status.CRM_BINDINGS
-        :
-        [];
-
-
-    const contactBinding =
-        bindings.find(
-            function (binding) {
-
-                return (
-                    String(
-                        binding.ENTITY_TYPE || ''
-                    ).toUpperCase() === 'CONTACT'
-                    &&
-                    normalizePositiveId(
-                        binding.ENTITY_ID
-                    ) > 0
-                );
-            }
-        );
-
-
-    if (contactBinding) {
-
-        findLeadByContactId(
-            contactBinding.ENTITY_ID
-        );
-
-        return;
-    }
-
-
-    /*
-     * Если CALL_CARD передал только номер телефона —
-     * находим контакт по телефону.
-     */
-
-    if (!isUsablePhone(phoneNumber)) {
-        finishWithoutLead();
-        return;
-    }
-
-
-    BX24.callMethod(
-        'crm.duplicate.findbycomm',
-
-        {
-            entity_type:
-                'CONTACT',
-
-            type:
-                'PHONE',
-
-            values: [
-                phoneNumber
-            ]
-        },
-
-        function (result) {
-
-            if (result.error()) {
-
-                console.warn(
-                    'Не удалось найти контакт по телефону:',
-                    result.error(),
-                    result.error_description()
-                );
-
-                finishWithoutLead();
-                return;
-            }
-
-
-            const data =
-                result.data() || {};
-
-
-            const contactIds =
-                Array.isArray(
-                    data.CONTACT
-                )
-                ?
-                data.CONTACT
-                :
-                [];
-
-
-            if (!contactIds.length) {
-                finishWithoutLead();
-                return;
-            }
-
-
-            findLeadByContactId(
-                contactIds[0]
-            );
-        }
     );
 }
 
@@ -1527,6 +1215,248 @@ function findLeadIdInStatus(
 }
 
 
+
+/*
+ * =========================================================
+ * ИЩЕМ СУЩЕСТВУЮЩИЙ АКТИВНЫЙ ЛИД ПО ТЕЛЕФОНУ
+ * =========================================================
+ */
+
+function resolveExistingLeadForCurrentCall() {
+
+    if (
+        leadId
+        ||
+        existingLeadLookupInProgress
+        ||
+        !callId
+    ) {
+        return;
+    }
+
+
+    if (
+        existingLeadLookupDoneForCallId ===
+        callId
+    ) {
+
+        showCreateLeadButton();
+        return;
+    }
+
+
+    if (!isUsablePhone(phoneNumber)) {
+
+        showCreateLeadButton();
+        return;
+    }
+
+
+    existingLeadLookupInProgress =
+        true;
+
+    syncCreateLeadButtonState();
+
+    document.getElementById(
+        'leadInfo'
+    ).textContent =
+        'Ищем существующий лид по номеру телефона...';
+
+
+    findExistingActiveLeadByPhone(
+        phoneNumber,
+
+        function (
+            foundLeadId
+        ) {
+
+            existingLeadLookupInProgress =
+                false;
+
+            existingLeadLookupDoneForCallId =
+                callId;
+
+
+            if (foundLeadId) {
+
+                setLead(
+                    foundLeadId,
+                    false
+                );
+
+                ensureCallActivityBinding();
+
+                return;
+            }
+
+
+            showCreateLeadButton();
+        }
+    );
+}
+
+
+function findExistingActiveLeadByPhone(
+    phone,
+    callback
+) {
+
+    BX24.callMethod(
+        'crm.duplicate.findbycomm',
+
+        {
+            entity_type:
+                'LEAD',
+
+            type:
+                'PHONE',
+
+            values: [
+                phone
+            ]
+        },
+
+        function (
+            result
+        ) {
+
+            if (result.error()) {
+
+                console.warn(
+                    'Не удалось найти лид по телефону:',
+                    result.error(),
+                    result.error_description()
+                );
+
+                callback(0);
+                return;
+            }
+
+
+            const data =
+                result.data() || {};
+
+            const ids =
+                (
+                    Array.isArray(
+                        data.LEAD
+                    )
+                    ?
+                    data.LEAD
+                    :
+                    []
+                )
+                .map(
+                    normalizePositiveId
+                )
+                .filter(Boolean)
+                .sort(
+                    function (a, b) {
+                        return b - a;
+                    }
+                );
+
+
+            if (!ids.length) {
+
+                callback(0);
+                return;
+            }
+
+
+            findFirstActiveLeadFromIds(
+                ids,
+                0,
+                callback
+            );
+        }
+    );
+}
+
+
+function findFirstActiveLeadFromIds(
+    ids,
+    index,
+    callback
+) {
+
+    if (
+        index >=
+        ids.length
+    ) {
+
+        callback(0);
+        return;
+    }
+
+
+    const id =
+        normalizePositiveId(
+            ids[index]
+        );
+
+
+    if (!id) {
+
+        findFirstActiveLeadFromIds(
+            ids,
+            index + 1,
+            callback
+        );
+
+        return;
+    }
+
+
+    BX24.callMethod(
+        'crm.lead.get',
+
+        {
+            id:
+                id
+        },
+
+        function (
+            result
+        ) {
+
+            if (!result.error()) {
+
+                const lead =
+                    result.data() || {};
+
+                const semantic =
+                    String(
+                        lead.STATUS_SEMANTIC_ID || ''
+                    ).toUpperCase();
+
+                /*
+                 * P = лид в работе.
+                 * Если semantic не пришёл, считаем лид пригодным,
+                 * чтобы не создавать дубль из-за особенностей ответа.
+                 */
+                if (
+                    !semantic
+                    ||
+                    semantic === 'P'
+                ) {
+
+                    callback(id);
+                    return;
+                }
+            }
+
+
+            findFirstActiveLeadFromIds(
+                ids,
+                index + 1,
+                callback
+            );
+        }
+    );
+}
+
+
 /*
  * =========================================================
  * КНОПКА "+ СОЗДАТЬ ЛИД"
@@ -1573,6 +1503,16 @@ function showCreateLeadButton() {
 
 
 function createLeadManually() {
+
+    if (existingLeadLookupInProgress) {
+
+        showError(
+            'Сначала проверяем, нет ли уже существующего лида.'
+        );
+
+        return;
+    }
+
 
     if (leadId) {
 
@@ -3229,6 +3169,8 @@ function setLead(
     }
 
 
+    syncResultSelectState();
+
     updateSaveAvailability();
 }
 
@@ -3534,6 +3476,14 @@ function handleCallState(
     callState
 ) {
 
+    currentCallState =
+        String(
+            callState || currentCallState || ''
+        );
+
+    syncResultSelectState();
+
+
     const statusElement =
         document.getElementById(
             'callStatus'
@@ -3628,29 +3578,9 @@ function enableResultMode() {
     );
 
 
-    blockAutoClose();
+    startAutoCloseGuard();
 
-
-    if (!keepAliveTimer) {
-
-        keepAliveTimer =
-            setInterval(
-                function () {
-
-                    if (
-                        resultModeEnabled
-                        &&
-                        !resultSaved
-                    ) {
-
-                        blockAutoClose();
-                    }
-
-                },
-                45000
-            );
-    }
-
+    syncResultSelectState();
 
     updateSaveAvailability();
 }
@@ -3664,16 +3594,94 @@ function enableResultMode() {
 
 function blockAutoClose() {
 
-    BX24.placement.call(
-        'disableAutoClose',
-        {},
-        function () {
+    try {
 
-            console.log(
-                'Автозакрытие карточки звонка заблокировано'
-            );
-        }
-    );
+        BX24.placement.call(
+            'disableAutoClose',
+            {},
+            function () {
+
+                console.log(
+                    'Автозакрытие карточки звонка заблокировано'
+                );
+            }
+        );
+
+    } catch (e) {
+
+        console.warn(
+            'disableAutoClose недоступен:',
+            e
+        );
+    }
+}
+
+
+function startAutoCloseGuard() {
+
+    allowAutoClose =
+        false;
+
+    blockAutoClose();
+
+
+    if (keepAliveTimer) {
+        return;
+    }
+
+
+    keepAliveTimer =
+        setInterval(
+            function () {
+
+                if (!allowAutoClose) {
+
+                    blockAutoClose();
+                }
+
+            },
+            10000
+        );
+}
+
+
+function releaseAutoClose() {
+
+    allowAutoClose =
+        true;
+
+
+    if (keepAliveTimer) {
+
+        clearInterval(
+            keepAliveTimer
+        );
+
+        keepAliveTimer =
+            null;
+    }
+
+
+    try {
+
+        BX24.placement.call(
+            'enableAutoClose',
+            {},
+            function () {
+
+                console.log(
+                    'Автозакрытие карточки звонка снова разрешено'
+                );
+            }
+        );
+
+    } catch (e) {
+
+        console.warn(
+            'enableAutoClose недоступен:',
+            e
+        );
+    }
 }
 
 
@@ -4151,9 +4159,10 @@ function fillResultOptions(
     }
 
 
-    select.disabled =
-        false;
+    resultOptionsLoaded =
+        true;
 
+    syncResultSelectState();
 
     updateSaveAvailability();
 }
@@ -5245,21 +5254,12 @@ function saveCallResult() {
                         false;
 
 
-                    if (keepAliveTimer) {
-
-                        clearInterval(
-                            keepAliveTimer
-                        );
-
-                        keepAliveTimer =
-                            null;
-                    }
-
-
-                    document.getElementById(
-                        'callResult'
-                    ).disabled =
-                        true;
+                    /*
+                     * Автозакрытие пока НЕ разрешаем:
+                     * сначала должна создаться и провериться
+                     * кастомная карточка звонка.
+                     */
+                    syncResultSelectState();
 
 
                     setLoading(
@@ -5319,17 +5319,7 @@ function saveCallResult() {
                                 );
 
 
-                                BX24.placement.call(
-                                    'enableAutoClose',
-                                    {},
-
-                                    function () {
-
-                                        console.log(
-                                            'Автозакрытие карточки звонка снова разрешено'
-                                        );
-                                    }
-                                );
+                                releaseAutoClose();
                             }
                         )
                         .catch(
@@ -5348,17 +5338,7 @@ function saveCallResult() {
                                 );
 
 
-                                BX24.placement.call(
-                                    'enableAutoClose',
-                                    {},
-
-                                    function () {
-
-                                        console.log(
-                                            'Автозакрытие карточки звонка снова разрешено'
-                                        );
-                                    }
-                                );
+                                releaseAutoClose();
                             }
                         );
                 }
@@ -5768,6 +5748,32 @@ function normalizeCallResultForRouting(
  * ДОСТУПНОСТЬ КНОПКИ
  * =========================================================
  */
+
+function syncResultSelectState() {
+
+    const select =
+        document.getElementById(
+            'callResult'
+        );
+
+
+    if (!select) {
+        return;
+    }
+
+
+    select.disabled =
+        !(
+            resultOptionsLoaded
+            &&
+            currentCallState === 'idle'
+            &&
+            leadId > 0
+            &&
+            !resultSaved
+        );
+}
+
 
 function updateSaveAvailability() {
 
