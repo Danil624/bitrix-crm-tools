@@ -1,1 +1,1184 @@
 
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Запланировать звонок</title>
+    <script src="https://api.bitrix24.com/api/v1/"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 18px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f7f8;
+            color: #333;
+        }
+
+        .card {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 22px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 3px 15px rgba(0, 0, 0, .08);
+        }
+
+        h1 {
+            margin: 0 0 18px;
+            font-size: 22px;
+        }
+
+        .row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .col {
+            flex: 1;
+        }
+
+        .group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 7px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid #c6cdd3;
+            border-radius: 6px;
+            background: #fff;
+            font-size: 15px;
+            outline: none;
+        }
+
+        textarea {
+            min-height: 110px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            border-color: #2fc6f6;
+        }
+
+        .client {
+            margin-bottom: 16px;
+            padding: 11px 12px;
+            background: #f6f8f9;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: 0;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .save {
+            background: #2fc6f6;
+            color: #fff;
+        }
+
+        .cancel {
+            background: #eef2f4;
+            color: #333;
+        }
+
+        button:disabled {
+            opacity: .6;
+            cursor: default;
+        }
+
+        .message {
+            display: none;
+            margin-top: 14px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .message.error {
+            display: block;
+            background: #fdeaea;
+            color: #b93030;
+        }
+
+        .message.success {
+            display: block;
+            background: #e7f7ec;
+            color: #24743a;
+        }
+
+        @media (max-width: 620px) {
+            .row {
+                display: block;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="card">
+
+    <h1>
+        Запланировать исходящий звонок
+    </h1>
+
+    <div
+        class="client"
+        id="clientInfo"
+    >
+        Определяем лид...
+    </div>
+
+    <div class="row">
+
+        <div class="group col">
+
+            <label for="startAt">
+                Дата и время звонка
+            </label>
+
+            <input
+                id="startAt"
+                type="datetime-local"
+            >
+
+        </div>
+
+        <div class="group col">
+
+            <label for="duration">
+                Длительность
+            </label>
+
+            <select id="duration">
+
+                <option value="15">
+                    15 минут
+                </option>
+
+                <option
+                    value="30"
+                    selected
+                >
+                    30 минут
+                </option>
+
+                <option value="60">
+                    1 час
+                </option>
+
+                <option value="90">
+                    1 час 30 минут
+                </option>
+
+                <option value="120">
+                    2 часа
+                </option>
+
+            </select>
+
+        </div>
+
+    </div>
+
+    <div class="group">
+
+        <label for="subject">
+            О чём разговор
+        </label>
+
+        <input
+            id="subject"
+            type="text"
+            placeholder="Например: обсудить комплектацию и условия покупки"
+        >
+
+    </div>
+
+    <div class="group">
+
+        <label for="description">
+            Описание
+        </label>
+
+        <textarea
+            id="description"
+            placeholder="Что нужно обсудить, уточнить или подготовить к звонку"
+        ></textarea>
+
+    </div>
+
+    <div class="group">
+
+        <label for="reminder">
+            Напоминание
+        </label>
+
+        <select id="reminder">
+
+            <option value="0">
+                Без напоминания
+            </option>
+
+            <option value="5">
+                За 5 минут
+            </option>
+
+            <option
+                value="15"
+                selected
+            >
+                За 15 минут
+            </option>
+
+            <option value="30">
+                За 30 минут
+            </option>
+
+            <option value="60">
+                За 1 час
+            </option>
+
+        </select>
+
+    </div>
+
+    <div class="actions">
+
+        <button
+            class="save"
+            id="saveButton"
+            onclick="saveCall()"
+        >
+            Сохранить
+        </button>
+
+        <button
+            class="cancel"
+            onclick="closeForm()"
+        >
+            Отменить
+        </button>
+
+    </div>
+
+    <div
+        class="message"
+        id="message"
+    ></div>
+
+</div>
+
+<script>
+
+let leadId =
+    0;
+
+let leadData =
+    null;
+
+let contactId =
+    0;
+
+let phone =
+    '';
+
+
+BX24.init(
+    function () {
+
+        try {
+
+            BX24.resizeWindow(
+                760,
+                690
+            );
+
+        } catch (e) {
+        }
+
+
+        const info =
+            BX24.placement.info()
+            ||
+            {};
+
+        const options =
+            info.options
+            ||
+            {};
+
+
+        leadId =
+            findLeadId(
+                options
+            );
+
+
+        if (!leadId) {
+
+            showError(
+                'Не удалось определить текущий лид.'
+            );
+
+            document
+                .getElementById(
+                    'saveButton'
+                )
+                .disabled =
+                true;
+
+            return;
+        }
+
+
+        setDefaultDateTime();
+
+        loadLead();
+    }
+);
+
+
+/*
+ * ========================================
+ * ИЩЕМ ID ЛИДА
+ * ========================================
+ */
+
+function findLeadId(
+    obj
+) {
+
+    if (
+        !obj
+        ||
+        typeof obj !==
+        'object'
+    ) {
+
+        return 0;
+    }
+
+
+    const directKeys = [
+
+        'ID',
+        'id',
+
+        'ENTITY_ID',
+        'entityId',
+
+        'OWNER_ID',
+        'ownerId',
+
+        'LEAD_ID',
+        'leadId'
+
+    ];
+
+
+    for (
+        const key
+        of directKeys
+    ) {
+
+        const value =
+            Number(
+                obj[key]
+                ||
+                0
+            );
+
+
+        if (
+            Number.isFinite(
+                value
+            )
+            &&
+            value > 0
+        ) {
+
+            return Math.trunc(
+                value
+            );
+        }
+    }
+
+
+    for (
+        const key
+        in obj
+    ) {
+
+        if (
+            obj[key]
+            &&
+            typeof obj[key]
+            ===
+            'object'
+        ) {
+
+            const found =
+                findLeadId(
+                    obj[key]
+                );
+
+
+            if (found) {
+
+                return found;
+            }
+        }
+    }
+
+
+    return 0;
+}
+
+
+/*
+ * ========================================
+ * ВРЕМЯ ПО УМОЛЧАНИЮ
+ * ========================================
+ */
+
+function setDefaultDateTime() {
+
+    const d =
+        new Date(
+            Date.now()
+            +
+            15 * 60 * 1000
+        );
+
+
+    d.setSeconds(
+        0,
+        0
+    );
+
+
+    const local =
+        new Date(
+            d.getTime()
+            -
+            d.getTimezoneOffset()
+            *
+            60000
+        )
+        .toISOString()
+        .slice(
+            0,
+            16
+        );
+
+
+    document
+        .getElementById(
+            'startAt'
+        )
+        .value =
+        local;
+}
+
+
+/*
+ * ========================================
+ * ЗАГРУЖАЕМ ЛИД
+ * ========================================
+ */
+
+function loadLead() {
+
+    BX24.callMethod(
+
+        'crm.lead.get',
+
+        {
+            id:
+                leadId
+        },
+
+        function (
+            result
+        ) {
+
+            if (
+                result.error()
+            ) {
+
+                showError(
+                    'Не удалось загрузить лид: '
+                    +
+                    result.error_description()
+                );
+
+                return;
+            }
+
+
+            leadData =
+                result.data()
+                ||
+                {};
+
+
+            document
+                .getElementById(
+                    'clientInfo'
+                )
+                .textContent =
+                'Клиент: '
+                +
+                (
+                    leadData.TITLE
+                    ||
+                    (
+                        'Лид #'
+                        +
+                        leadId
+                    )
+                );
+
+
+            contactId =
+                Number(
+                    leadData.CONTACT_ID
+                    ||
+                    0
+                );
+
+
+            if (
+                !contactId
+                &&
+                Array.isArray(
+                    leadData.CONTACT_IDS
+                )
+                &&
+                leadData.CONTACT_IDS.length
+            ) {
+
+                contactId =
+                    Number(
+                        leadData.CONTACT_IDS[0]
+                        ||
+                        0
+                    );
+            }
+
+
+            if (
+                contactId
+            ) {
+
+                BX24.callMethod(
+
+                    'crm.contact.get',
+
+                    {
+                        id:
+                            contactId
+                    },
+
+                    function (
+                        contactResult
+                    ) {
+
+                        if (
+                            !contactResult.error()
+                        ) {
+
+                            const contact =
+                                contactResult.data()
+                                ||
+                                {};
+
+
+                            phone =
+                                extractPhone(
+                                    contact.PHONE
+                                );
+                        }
+
+
+                        if (
+                            !phone
+                        ) {
+
+                            phone =
+                                extractPhone(
+                                    leadData.PHONE
+                                );
+                        }
+                    }
+                );
+
+            } else {
+
+                phone =
+                    extractPhone(
+                        leadData.PHONE
+                    );
+            }
+        }
+    );
+}
+
+
+/*
+ * ========================================
+ * ТЕЛЕФОН
+ * ========================================
+ */
+
+function extractPhone(
+    list
+) {
+
+    if (
+        !Array.isArray(
+            list
+        )
+    ) {
+
+        return '';
+    }
+
+
+    const item =
+        list.find(
+            function (
+                item
+            ) {
+
+                return (
+                    item
+                    &&
+                    item.VALUE
+                );
+            }
+        )
+        ||
+        null;
+
+
+    return item
+        ?
+        String(
+            item.VALUE
+        )
+        :
+        '';
+}
+
+
+/*
+ * ========================================
+ * СОХРАНЯЕМ ЗВОНОК
+ * ========================================
+ */
+
+function saveCall() {
+
+    const subject =
+        String(
+            document
+                .getElementById(
+                    'subject'
+                )
+                .value
+            ||
+            ''
+        )
+        .trim();
+
+
+    const description =
+        String(
+            document
+                .getElementById(
+                    'description'
+                )
+                .value
+            ||
+            ''
+        )
+        .trim();
+
+
+    const startValue =
+        document
+            .getElementById(
+                'startAt'
+            )
+            .value;
+
+
+    const duration =
+        Number(
+            document
+                .getElementById(
+                    'duration'
+                )
+                .value
+            ||
+            30
+        );
+
+
+    const reminder =
+        Number(
+            document
+                .getElementById(
+                    'reminder'
+                )
+                .value
+            ||
+            0
+        );
+
+
+    if (
+        !subject
+    ) {
+
+        showError(
+            'Заполните поле «О чём разговор».'
+        );
+
+        return;
+    }
+
+
+    if (
+        !startValue
+    ) {
+
+        showError(
+            'Укажите дату и время звонка.'
+        );
+
+        return;
+    }
+
+
+    const start =
+        new Date(
+            startValue
+        );
+
+
+    if (
+        Number.isNaN(
+            start.getTime()
+        )
+    ) {
+
+        showError(
+            'Некорректная дата звонка.'
+        );
+
+        return;
+    }
+
+
+    const end =
+        new Date(
+            start.getTime()
+            +
+            duration * 60000
+        );
+
+
+    const fields = {
+
+        OWNER_TYPE_ID:
+            1,
+
+        OWNER_ID:
+            leadId,
+
+        TYPE_ID:
+            2,
+
+        DIRECTION:
+            2,
+
+        SUBJECT:
+            subject,
+
+        DESCRIPTION:
+            description,
+
+        DESCRIPTION_TYPE:
+            1,
+
+        START_TIME:
+            toBitrixDate(
+                start
+            ),
+
+        END_TIME:
+            toBitrixDate(
+                end
+            ),
+
+        COMPLETED:
+            'N',
+
+        PRIORITY:
+            2,
+
+        RESPONSIBLE_ID:
+            Number(
+                leadData?.ASSIGNED_BY_ID
+                ||
+                0
+            )
+            ||
+            undefined,
+
+        BINDINGS: [
+            {
+                OWNER_TYPE_ID:
+                    1,
+
+                OWNER_ID:
+                    leadId
+            }
+        ]
+    };
+
+
+    /*
+     * Напоминание
+     */
+
+    if (
+        reminder > 0
+    ) {
+
+        fields.NOTIFY_TYPE =
+            1;
+
+        fields.NOTIFY_VALUE =
+            reminder;
+    }
+
+
+    /*
+     * Телефон клиента
+     */
+
+    if (
+        phone
+    ) {
+
+        fields.COMMUNICATIONS = [
+            {
+                TYPE:
+                    'PHONE',
+
+                VALUE:
+                    phone,
+
+                ENTITY_ID:
+                    contactId
+                    ||
+                    leadId,
+
+                ENTITY_TYPE_ID:
+                    contactId
+                    ?
+                    3
+                    :
+                    1
+            }
+        ];
+    }
+
+
+    /*
+     * Убираем undefined
+     */
+
+    Object
+        .keys(
+            fields
+        )
+        .forEach(
+            function (
+                key
+            ) {
+
+                if (
+                    fields[key]
+                    ===
+                    undefined
+                ) {
+
+                    delete fields[key];
+                }
+            }
+        );
+
+
+    const button =
+        document
+            .getElementById(
+                'saveButton'
+            );
+
+
+    button.disabled =
+        true;
+
+    button.textContent =
+        'Сохраняю...';
+
+
+    BX24.callMethod(
+
+        'crm.activity.add',
+
+        {
+            fields:
+                fields
+        },
+
+        function (
+            result
+        ) {
+
+            button.disabled =
+                false;
+
+            button.textContent =
+                'Сохранить';
+
+
+            if (
+                result.error()
+            ) {
+
+                showError(
+                    'Не удалось создать звонок: '
+                    +
+                    result.error_description()
+                );
+
+                return;
+            }
+
+
+            showSuccess(
+                'Звонок запланирован.'
+            );
+
+
+            setTimeout(
+                closeForm,
+                500
+            );
+        }
+    );
+}
+
+
+/*
+ * ========================================
+ * ФОРМАТ ДАТЫ BITRIX
+ * ========================================
+ */
+
+function toBitrixDate(
+    date
+) {
+
+    const pad =
+        function (
+            n
+        ) {
+
+            return String(
+                n
+            )
+            .padStart(
+                2,
+                '0'
+            );
+        };
+
+
+    const offset =
+        -date.getTimezoneOffset();
+
+
+    const sign =
+        offset >= 0
+        ?
+        '+'
+        :
+        '-';
+
+
+    const abs =
+        Math.abs(
+            offset
+        );
+
+
+    return (
+        date.getFullYear()
+        +
+        '-'
+        +
+        pad(
+            date.getMonth()
+            +
+            1
+        )
+        +
+        '-'
+        +
+        pad(
+            date.getDate()
+        )
+        +
+        'T'
+        +
+        pad(
+            date.getHours()
+        )
+        +
+        ':'
+        +
+        pad(
+            date.getMinutes()
+        )
+        +
+        ':'
+        +
+        pad(
+            date.getSeconds()
+        )
+        +
+        sign
+        +
+        pad(
+            Math.floor(
+                abs / 60
+            )
+        )
+        +
+        ':'
+        +
+        pad(
+            abs % 60
+        )
+    );
+}
+
+
+/*
+ * ========================================
+ * ЗАКРЫТИЕ
+ * ========================================
+ */
+
+function closeForm() {
+
+    try {
+
+        BX24.closeApplication();
+
+    } catch (e) {
+
+        try {
+
+            BX24.slider.close();
+
+        } catch (e2) {
+        }
+    }
+}
+
+
+/*
+ * ========================================
+ * СООБЩЕНИЯ
+ * ========================================
+ */
+
+function showError(
+    text
+) {
+
+    const el =
+        document
+            .getElementById(
+                'message'
+            );
+
+
+    el.className =
+        'message error';
+
+    el.textContent =
+        text;
+}
+
+
+function showSuccess(
+    text
+) {
+
+    const el =
+        document
+            .getElementById(
+                'message'
+            );
+
+
+    el.className =
+        'message success';
+
+    el.textContent =
+        text;
+}
+
+</script>
+
+</body>
+</html>
