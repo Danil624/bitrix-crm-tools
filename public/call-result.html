@@ -4549,6 +4549,63 @@ function getCallBodyLogoCode(
 }
 
 
+async function deleteStandardCallActivity(
+    activityId
+) {
+
+    activityId =
+        normalizePositiveId(
+            activityId
+        );
+
+    if (!activityId) {
+        return false;
+    }
+
+
+    for (
+        let attempt = 1;
+        attempt <= 5;
+        attempt++
+    ) {
+
+        try {
+
+            await bxCallPromise(
+                'crm.activity.delete',
+                {
+                    id:
+                        activityId
+                }
+            );
+
+            console.log(
+                'Стандартное дело звонка удалено:',
+                activityId
+            );
+
+            return true;
+
+        } catch (error) {
+
+            console.warn(
+                'Попытка удалить стандартное дело #' +
+                activityId +
+                ' (' + attempt + '/5):',
+                error
+            );
+
+            if (attempt < 5) {
+                await waitMs(500);
+            }
+        }
+    }
+
+
+    return false;
+}
+
+
 async function replaceStandardCallWithCustomCard(
     resultText,
     callComment = ''
@@ -4569,10 +4626,42 @@ async function replaceStandardCallWithCustomCard(
      * обязательным условием для создания нашей карточки.
      */
 
-    const originalActivityId =
+    let originalActivityId =
         await waitForCrmActivityId(
             5000
         );
+
+
+    /*
+     * Иногда CALL_CARD не отдаёт CRM_ACTIVITY_ID,
+     * хотя стандартное дело звонка уже создано.
+     * В таком случае берём его из статистики телефонии
+     * по текущему CALL_ID.
+     */
+    const callStatistic =
+        await getCallStatistic(
+            originalActivityId
+        );
+
+
+    if (!originalActivityId) {
+
+        originalActivityId =
+            normalizePositiveId(
+                callStatistic?.CRM_ACTIVITY_ID
+            );
+
+        if (originalActivityId) {
+
+            crmActivityId =
+                originalActivityId;
+
+            console.log(
+                'CRM_ACTIVITY_ID найден через voximplant.statistic.get:',
+                originalActivityId
+            );
+        }
+    }
 
 
     let activity = {};
@@ -4601,12 +4690,6 @@ async function replaceStandardCallWithCustomCard(
             activity = {};
         }
     }
-
-
-    const callStatistic =
-        await getCallStatistic(
-            originalActivityId
-        );
 
 
     const recordUrl =
@@ -4677,6 +4760,16 @@ async function replaceStandardCallWithCustomCard(
         directionTitle =
             'Обратный звонок';
     }
+
+
+    const completedDirectionTitle =
+        directionTitle === 'Исходящий звонок'
+        ? 'Завершён исходящий звонок'
+        : directionTitle === 'Входящий звонок'
+        ? 'Завершён входящий звонок'
+        : directionTitle === 'Обратный звонок'
+        ? 'Завершён обратный звонок'
+        : 'Завершён звонок';
 
 
     const callLogoCode =
@@ -4905,7 +4998,7 @@ async function replaceStandardCallWithCustomCard(
                     header: {
 
                         title:
-                            directionTitle
+                            completedDirectionTitle
                     },
 
                     body: {
@@ -5036,38 +5129,22 @@ async function replaceStandardCallWithCustomCard(
     );
 
 
-    let standardDeleted =
-        false;
+    const standardDeleted =
+        await deleteStandardCallActivity(
+            originalActivityId
+        );
 
 
-    if (originalActivityId) {
+    if (
+        originalActivityId
+        &&
+        !standardDeleted
+    ) {
 
-        try {
-
-            await bxCallPromise(
-                'crm.activity.delete',
-                {
-                    id:
-                        originalActivityId
-                }
-            );
-
-
-            standardDeleted =
-                true;
-
-        } catch (deleteError) {
-
-            /*
-             * Кастомную карточку больше НЕ удаляем.
-             * Главное — не остаться вообще без записи.
-             */
-
-            console.warn(
-                'Кастомная карточка создана, но стандартный звонок удалить не удалось:',
-                deleteError
-            );
-        }
+        console.warn(
+            'Кастомная карточка создана, но стандартный звонок не удалось удалить:',
+            originalActivityId
+        );
     }
 
 
