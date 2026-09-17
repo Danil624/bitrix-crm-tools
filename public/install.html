@@ -476,7 +476,61 @@ function placementExists(
     );
 }
 
+async function cleanupWrongCallCard() {
 
+    var items =
+        await getPlacements();
+
+    for (
+        var i = 0;
+        i < items.length;
+        i++
+    ) {
+
+        var item =
+            items[i];
+
+        var placement =
+            placementName(item);
+
+        var handler =
+            placementHandler(item);
+
+        if (
+            placement === 'CALL_CARD'
+            &&
+            handler.indexOf('/call-plan.php') !== -1
+        ) {
+
+            try {
+
+                await call(
+                    'placement.unbind',
+                    {
+                        PLACEMENT:
+                            'CALL_CARD',
+
+                        HANDLER:
+                            handler
+                    }
+                );
+
+                log(
+                    'Удалена неправильная привязка CALL_CARD → call-plan.php',
+                    'ok'
+                );
+
+            } catch (error) {
+
+                log(
+                    'Ошибка удаления старого CALL_CARD: ' +
+                    error.message,
+                    'err'
+                );
+            }
+        }
+    }
+}
 /*
  * ============================================
  * РЕГИСТРИРУЕМ НЕДОСТАЮЩИЕ
@@ -862,7 +916,8 @@ BX24.init(
             baseUrl()
         );
 
-
+        await cleanupWrongCallCard();
+        
         await ensurePlacements();
 
         await ensureEvents();
