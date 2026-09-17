@@ -1516,6 +1516,10 @@ if (
       '/testdrive.html': '/testdrive.html',
       '/commercial.php': '/commercial.html',
       '/commercial.html': '/commercial.html',
+
+      '/call-plan.php': '/call-plan.html',
+'/call-plan.html': '/call-plan.html',
+      
       '/call-complete.php': '/call-complete.html',
       '/call-complete.html': '/call-complete.html',
     };
