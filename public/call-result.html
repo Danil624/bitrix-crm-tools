@@ -232,8 +232,7 @@
     </h1>
 
     <div class="subtitle">
-        Если для звонка нужен новый лид — создайте его одной кнопкой.
-        После завершения звонка выберите результат.
+        После завершения звонка выберите результат — он сохранится автоматически.
     </div>
 
 
@@ -301,6 +300,7 @@
 
         <select
             id="callResult"
+            onchange="saveCallResult()"
             disabled
         >
             <option value="">
@@ -309,22 +309,15 @@
         </select>
 
 
-        <div class="comment-group">
-            <label for="callComment">
-                О чём был разговор
-            </label>
-
-            <textarea
-                id="callComment"
-                placeholder="Коротко зафиксируйте, что обсудили с клиентом и о чём договорились"
-            ></textarea>
-        </div>
-
-
+        <!--
+            Кнопка оставлена скрытой только для совместимости
+            с внутренними функциями setLoading/updateSaveAvailability.
+            Результат сохраняется автоматически при выборе.
+        -->
         <button
             type="button"
             id="saveButton"
-            onclick="saveCallResult()"
+            style="display:none;"
             disabled
         >
             Сохранить результат
@@ -4813,11 +4806,7 @@ function saveCallResult() {
 
 
     const callComment =
-        String(
-            document.getElementById(
-                'callComment'
-            )?.value || ''
-        ).trim();
+        '';
 
 
     setLoading(
