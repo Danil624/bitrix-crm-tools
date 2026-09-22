@@ -1420,14 +1420,15 @@ export default {
   async fetch(request, env,ctx) {
     const requestUrl =
       new URL(request.url);
+if (requestUrl.hostname.endsWith('.workers.dev')) {
+  const target = new URL(
+    requestUrl.pathname + requestUrl.search,
+    ORIGIN_URL
+  );
 
-    if (
-      requestUrl.hostname.endsWith(
-        '.workers.dev'
-      )
-    ) {
-      return proxyToServer(request);
-    }
+  return Response.redirect(target.toString(), 307);
+}
+   
     const url = new URL(request.url);
     const path = url.pathname.toLowerCase();
 
