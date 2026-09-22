@@ -11,6 +11,9 @@ async function proxyToServer(request) {
   const headers = new Headers(request.headers);
 
   headers.delete('host');
+  headers.delete('connection');
+headers.set('accept-encoding', 'identity');
+  
   headers.set('x-forwarded-host', incoming.host);
   headers.set('x-forwarded-proto', 'https');
 
