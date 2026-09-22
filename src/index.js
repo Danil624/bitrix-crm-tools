@@ -14,11 +14,11 @@ async function proxyToServer(request) {
   headers.set('x-forwarded-host', incoming.host);
   headers.set('x-forwarded-proto', 'https');
 
-  const options = {
-    method: request.method,
-    headers,A
-    redirect: 'manual'
-  };
+ const options = {
+  method: request.method,
+  headers,
+  redirect: 'manual'
+};
 
   if (
     request.method !== 'GET' &&
