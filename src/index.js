@@ -1426,7 +1426,7 @@ if (requestUrl.hostname.endsWith('.workers.dev')) {
     ORIGIN_URL
   );
 
-  return Response.redirect(target.toString(), 307);
+  return Response.redirect(target.toString(), 302);
 }
    
     const url = new URL(request.url);
