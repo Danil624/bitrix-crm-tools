@@ -531,6 +531,85 @@ async function cleanupWrongCallCard() {
         }
     }
 }
+
+/*
+ * ============================================
+ * УДАЛЯЕМ СТАРЫЕ PLACEMENTS С ДРУГИМ HOST
+ * ============================================
+ */
+
+async function cleanupOldPlacements() {
+
+    var items =
+        await getPlacements();
+
+    for (
+        var i = 0;
+        i < items.length;
+        i++
+    ) {
+
+        var item =
+            items[i];
+
+        var placement =
+            placementName(item);
+
+        var handler =
+            placementHandler(item);
+
+        for (
+            var j = 0;
+            j < EXPECTED_PLACEMENTS.length;
+            j++
+        ) {
+
+            var expected =
+                EXPECTED_PLACEMENTS[j];
+
+            var currentUrl =
+                handlerUrl(expected.file);
+
+            if (
+                placement === expected.placement
+                &&
+                handler.endsWith(expected.file)
+                &&
+                handler !== currentUrl
+            ) {
+
+                try {
+
+                    await call(
+                        'placement.unbind',
+                        {
+                            PLACEMENT:
+                                placement,
+
+                            HANDLER:
+                                handler
+                        }
+                    );
+
+                    log(
+                        'Удалена старая привязка: ' +
+                        handler,
+                        'ok'
+                    );
+
+                } catch (error) {
+
+                    log(
+                        'Ошибка удаления старой привязки: ' +
+                        error.message,
+                        'err'
+                    );
+                }
+            }
+        }
+    }
+}
+
 /*
  * ============================================
  * РЕГИСТРИРУЕМ НЕДОСТАЮЩИЕ
@@ -917,6 +996,8 @@ BX24.init(
         );
 
         await cleanupWrongCallCard();
+
+        await cleanupOldPlacements();
         
         await ensurePlacements();
 
