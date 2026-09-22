@@ -1,3 +1,49 @@
+const ORIGIN_URL = 'https://kamaz-scrypt.taile47694.ts.net';
+
+async function proxyToServer(request) {
+  const incoming = new URL(request.url);
+
+  const target = new URL(
+    incoming.pathname + incoming.search,
+    ORIGIN_URL
+  );
+
+  const headers = new Headers(request.headers);
+
+  headers.delete('host');
+  headers.set('x-forwarded-host', incoming.host);
+  headers.set('x-forwarded-proto', 'https');
+
+  const options = {
+    method: request.method,
+    headers,A
+    redirect: 'manual'
+  };
+
+  if (
+    request.method !== 'GET' &&
+    request.method !== 'HEAD'
+  ) {
+    options.body = request.body;
+  }
+
+  const response = await fetch(
+    target.toString(),
+    options
+  );
+
+  const responseHeaders =
+    new Headers(response.headers);
+
+  return new Response(
+    response.body,
+    {
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders
+    }
+  );
+}
 const CALL_RESULT_FIELD_TITLE = 'Результат звонка';
 
 function json(data, status = 200) {
@@ -1367,6 +1413,16 @@ async function assetResponse(env, request, assetPath) {
 
 export default {
   async fetch(request, env,ctx) {
+    const requestUrl =
+      new URL(request.url);
+
+    if (
+      requestUrl.hostname.endsWith(
+        '.workers.dev'
+      )
+    ) {
+      return proxyToServer(request);
+    }
     const url = new URL(request.url);
     const path = url.pathname.toLowerCase();
 
