@@ -30,22 +30,24 @@ headers.set('accept-encoding', 'identity');
     options.body = request.body;
   }
 
-  const response = await fetch(
-    target.toString(),
-    options
-  );
+ const response = await fetch(
+  target.toString(),
+  options
+);
 
-  const responseHeaders =
-    new Headers(response.headers);
+const body = await response.arrayBuffer();
 
-  return new Response(
-    response.body,
-    {
-      status: response.status,
-      statusText: response.statusText,
-      headers: responseHeaders
-    }
-  );
+const responseHeaders = new Headers(response.headers);
+
+responseHeaders.delete('content-length');
+responseHeaders.delete('transfer-encoding');
+responseHeaders.delete('connection');
+
+return new Response(body, {
+  status: response.status,
+  statusText: response.statusText,
+  headers: responseHeaders
+});
 }
 const CALL_RESULT_FIELD_TITLE = 'Результат звонка';
 
