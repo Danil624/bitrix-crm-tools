@@ -2,16 +2,12 @@
 <html lang="ru">
 
 <head>
-
     <meta charset="UTF-8">
-
     <title>Тест-драйв</title>
 
     <script src="https://api.bitrix24.com/api/v1/"></script>
 
-
     <style>
-
         * {
             box-sizing: border-box;
         }
@@ -19,244 +15,146 @@
         body {
             margin: 0;
             padding: 20px;
-
-            font-family:
-                Arial,
-                Helvetica,
-                sans-serif;
-
+            font-family: Arial, Helvetica, sans-serif;
             background: #f5f7f8;
-
             color: #333;
         }
 
-
         .form-card {
-
             max-width: 700px;
-
             margin: 0 auto;
-
             background: #fff;
-
             border-radius: 12px;
-
             padding: 25px;
-
-            box-shadow:
-                0 3px 15px
-                rgba(0, 0, 0, .08);
+            box-shadow: 0 3px 15px rgba(0, 0, 0, .08);
         }
 
-
         .title {
-
             margin: 0 0 5px;
-
             font-size: 24px;
             font-weight: 600;
         }
 
-
         .subtitle {
-
             margin-bottom: 25px;
-
             color: #7a7a7a;
-
             font-size: 14px;
         }
 
-
         .form-group {
-
             margin-bottom: 18px;
         }
 
-
         label {
-
             display: block;
-
             margin-bottom: 7px;
-
             font-size: 14px;
-
             font-weight: 600;
         }
-
 
         input,
         textarea,
         select {
-
             width: 100%;
-
             padding: 11px 12px;
-
-            border:
-                1px solid #c6cdd3;
-
+            border: 1px solid #c6cdd3;
             border-radius: 6px;
-
             background: #fff;
-
             font-size: 15px;
-
             outline: none;
         }
-
 
         input:focus,
         textarea:focus,
         select:focus {
-
             border-color: #2fc6f6;
         }
 
-
         textarea {
-
             min-height: 100px;
-
             resize: vertical;
         }
 
-
         .responsible-row {
-
             display: flex;
-
             gap: 10px;
         }
 
-
         .responsible-row input {
-
             flex: 1;
         }
 
-
         .responsible-row button {
-
             flex: 0 0 auto;
         }
 
-
         button {
-
             border: none;
-
             border-radius: 6px;
-
             cursor: pointer;
-
             font-size: 14px;
-
             padding: 11px 18px;
         }
 
-
         .button-select {
-
             background: #eef2f4;
-
             color: #333;
         }
 
-
         .button-select:hover {
-
             background: #e1e6e9;
         }
 
-
         .button-submit {
-
             width: 100%;
-
             margin-top: 8px;
-
             padding: 13px;
-
             background: #2fc6f6;
-
             color: white;
-
             font-size: 16px;
-
             font-weight: 600;
         }
 
-
         .button-submit:hover {
-
             background: #22b9e8;
         }
 
-
         .button-submit:disabled {
-
             opacity: .6;
-
             cursor: default;
         }
 
-
         .message {
-
             margin-top: 15px;
-
             padding: 12px;
-
             border-radius: 6px;
-
             display: none;
         }
 
-
         .message.success {
-
             display: block;
-
             background: #e7f7ec;
-
             color: #24743a;
         }
 
-
         .message.error {
-
             display: block;
-
             background: #fdeaea;
-
             color: #b93030;
         }
 
-
-        .lead-info {
-
+        .entity-info {
             padding: 10px 12px;
-
             margin-bottom: 20px;
-
             background: #f6f8f9;
-
             border-radius: 6px;
-
             color: #555;
-
             font-size: 13px;
         }
-
     </style>
-
 </head>
 
-
 <body>
-
 
 <div class="form-card">
 
@@ -268,26 +166,20 @@
         Назначение тест-драйва клиенту
     </div>
 
-
     <div
-        class="lead-info"
-        id="leadInfo"
+        class="entity-info"
+        id="entityInfo"
     >
-        Загрузка данных лида...
+        Загрузка данных...
     </div>
-
 
     <input
         type="hidden"
-        id="lead_id"
+        id="entity_id"
         value="0"
     >
 
-
-    <!-- ДАТА И ВРЕМЯ -->
-
     <div class="form-group">
-
         <label for="datetime">
             Дата и время тест-драйва
         </label>
@@ -296,17 +188,9 @@
             type="datetime-local"
             id="datetime"
         >
-
     </div>
 
-
-   
-
-
-    <!-- АВТОМОБИЛЬ -->
-
     <div class="form-group">
-
         <label for="car">
             Автомобиль
         </label>
@@ -316,23 +200,13 @@
             id="car"
             placeholder="Например: Chery Tiggo 7 Pro Max"
         >
-
     </div>
-
-
-    <!-- МЕСТО -->
-
-   
-
-
-    <!-- ОТВЕТСТВЕННЫЙ -->
 
     <div class="form-group">
 
         <label>
             Ответственный за тест-драйв
         </label>
-
 
         <div class="responsible-row">
 
@@ -348,7 +222,6 @@
                 id="responsible_id"
             >
 
-
             <button
                 type="button"
                 class="button-select"
@@ -358,11 +231,7 @@
             </button>
 
         </div>
-
     </div>
-
-
-    <!-- КОММЕНТАРИЙ -->
 
     <div class="form-group">
 
@@ -377,7 +246,6 @@
 
     </div>
 
-
     <button
         id="createButton"
         class="button-submit"
@@ -386,7 +254,6 @@
         Назначить тест-драйв
     </button>
 
-
     <div
         id="message"
         class="message"
@@ -394,20 +261,23 @@
 
 </div>
 
-
 <script>
-
-/*
- * ==============================
- * НАСТРОЙКИ
- * ==============================
- */
 
 const WORK_STAGE_NAME =
     'В работе';
 
 
-let lead = null;
+let entityType =
+    '';
+
+let ownerTypeId =
+    0;
+
+let entityId =
+    0;
+
+let entity =
+    null;
 
 
 /*
@@ -418,47 +288,353 @@ let lead = null;
 
 BX24.init(function () {
 
-    BX24.resizeWindow(
-        750,
-        720
-    );
+    try {
+        BX24.resizeWindow(
+            750,
+            720
+        );
+    } catch (e) {
+    }
 
-    var placementInfo =
-        BX24.placement.info();
 
-    var placementOptions =
-        placementInfo
-        &&
-        placementInfo.options
-        ?
-        placementInfo.options
-        :
+    const placementInfo =
+        BX24.placement.info()
+        ||
         {};
 
-    document.getElementById(
-        'lead_id'
-    ).value =
-        Number(
-            placementOptions.ID
+
+    let placementOptions =
+        placementInfo.options
+        ||
+        {};
+
+
+    if (
+        typeof placementOptions ===
+        'string'
+    ) {
+
+        try {
+
+            placementOptions =
+                JSON.parse(
+                    placementOptions
+                );
+
+        } catch (e) {
+
+            placementOptions =
+                {};
+        }
+    }
+
+
+    const placement =
+        String(
+            placementInfo.placement
             ||
-            placementOptions.ENTITY_ID
-            ||
-            0
+            ''
+        )
+        .toUpperCase();
+
+
+    if (
+        placement.indexOf(
+            'CRM_DEAL'
+        ) !== -1
+    ) {
+
+        entityType =
+            'DEAL';
+
+        ownerTypeId =
+            2;
+
+    } else if (
+        placement.indexOf(
+            'CRM_LEAD'
+        ) !== -1
+    ) {
+
+        entityType =
+            'LEAD';
+
+        ownerTypeId =
+            1;
+
+    } else {
+
+        entityType =
+            detectEntityType(
+                placementOptions
+            );
+
+
+        ownerTypeId =
+            entityType === 'DEAL'
+            ?
+            2
+            :
+            (
+                entityType === 'LEAD'
+                ?
+                1
+                :
+                0
+            );
+    }
+
+
+    entityId =
+        findEntityId(
+            placementOptions
         );
+
+
+    document
+        .getElementById(
+            'entity_id'
+        )
+        .value =
+        entityId;
+
+
+    if (
+        !entityId
+        ||
+        !ownerTypeId
+    ) {
+
+        showError(
+            'Битрикс24 не передал ID текущего CRM-элемента'
+        );
+
+        document
+            .getElementById(
+                'createButton'
+            )
+            .disabled =
+            true;
+
+        return;
+    }
+
 
     setDefaultDateTime();
 
-    loadLead();
+    loadEntity();
 
 });
 
 
 /*
  * ==============================
+ * ОПРЕДЕЛЯЕМ ТИП СУЩНОСТИ
+ * ==============================
+ */
+
+function detectEntityType(
+    obj
+) {
+
+    if (
+        !obj
+        ||
+        typeof obj !==
+        'object'
+    ) {
+
+        return '';
+    }
+
+
+    const typeId =
+        Number(
+            obj.ENTITY_TYPE_ID
+            ||
+            obj.entityTypeId
+            ||
+            obj.OWNER_TYPE_ID
+            ||
+            obj.ownerTypeId
+            ||
+            0
+        );
+
+
+    if (
+        typeId === 2
+    ) {
+
+        return 'DEAL';
+    }
+
+
+    if (
+        typeId === 1
+    ) {
+
+        return 'LEAD';
+    }
+
+
+    if (
+        obj.DEAL_ID
+        ||
+        obj.dealId
+    ) {
+
+        return 'DEAL';
+    }
+
+
+    if (
+        obj.LEAD_ID
+        ||
+        obj.leadId
+    ) {
+
+        return 'LEAD';
+    }
+
+
+    for (
+        const key
+        in obj
+    ) {
+
+        if (
+            obj[key]
+            &&
+            typeof obj[key] ===
+            'object'
+        ) {
+
+            const found =
+                detectEntityType(
+                    obj[key]
+                );
+
+
+            if (
+                found
+            ) {
+
+                return found;
+            }
+        }
+    }
+
+
+    return '';
+}
+
+
+/*
+ * ==============================
+ * ИЩЕМ ID СУЩНОСТИ
+ * ==============================
+ */
+
+function findEntityId(
+    obj
+) {
+
+    if (
+        !obj
+        ||
+        typeof obj !==
+        'object'
+    ) {
+
+        return 0;
+    }
+
+
+    const directKeys = [
+
+        'DEAL_ID',
+        'dealId',
+
+        'LEAD_ID',
+        'leadId',
+
+        'ENTITY_ID',
+        'entityId',
+
+        'OWNER_ID',
+        'ownerId',
+
+        'ID',
+        'id'
+
+    ];
+
+
+    for (
+        const key
+        of directKeys
+    ) {
+
+        const value =
+            Number(
+                obj[key]
+                ||
+                0
+            );
+
+
+        if (
+            Number.isFinite(
+                value
+            )
+            &&
+            value > 0
+        ) {
+
+            return Math.trunc(
+                value
+            );
+        }
+    }
+
+
+    for (
+        const key
+        in obj
+    ) {
+
+        if (
+            obj[key]
+            &&
+            typeof obj[key] ===
+            'object'
+        ) {
+
+            const found =
+                findEntityId(
+                    obj[key]
+                );
+
+
+            if (
+                found
+            ) {
+
+                return found;
+            }
+        }
+    }
+
+
+    return 0;
+}
+
+
+/*
+ * ==============================
  * ДАТА ПО УМОЛЧАНИЮ
  * ==============================
- *
- * Ставим ближайший час.
  */
 
 function setDefaultDateTime() {
@@ -466,85 +642,123 @@ function setDefaultDateTime() {
     const date =
         new Date();
 
+
     date.setHours(
         date.getHours() + 1
     );
 
-    date.setMinutes(0);
-    date.setSeconds(0);
-    date.setMilliseconds(0);
+    date.setMinutes(
+        0
+    );
+
+    date.setSeconds(
+        0
+    );
+
+    date.setMilliseconds(
+        0
+    );
 
 
     const year =
         date.getFullYear();
 
+
     const month =
         String(
             date.getMonth() + 1
-        ).padStart(2, '0');
+        )
+        .padStart(
+            2,
+            '0'
+        );
+
 
     const day =
         String(
             date.getDate()
-        ).padStart(2, '0');
+        )
+        .padStart(
+            2,
+            '0'
+        );
+
 
     const hours =
         String(
             date.getHours()
-        ).padStart(2, '0');
+        )
+        .padStart(
+            2,
+            '0'
+        );
+
 
     const minutes =
         String(
             date.getMinutes()
-        ).padStart(2, '0');
+        )
+        .padStart(
+            2,
+            '0'
+        );
 
 
-    document.getElementById(
-        'datetime'
-    ).value =
+    document
+        .getElementById(
+            'datetime'
+        )
+        .value =
         `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 
 /*
  * ==============================
- * ПОЛУЧАЕМ ЛИД
+ * ПОЛУЧАЕМ CRM-ЭЛЕМЕНТ
  * ==============================
  */
 
-function loadLead() {
+function loadEntity() {
 
-    const leadId =
-        Number(
-            document.getElementById(
-                'lead_id'
-            ).value
-        );
-
-
-    if (!leadId) {
-
-        showError(
-            'Битрикс24 не передал ID лида'
-        );
-
-        return;
-    }
+    const method =
+        entityType === 'DEAL'
+        ?
+        'crm.deal.get'
+        :
+        'crm.lead.get';
 
 
     BX24.callMethod(
-        'crm.lead.get',
+
+        method,
 
         {
-            id: leadId
+            id:
+                entityId
         },
 
-        function (result) {
+        function (
+            result
+        ) {
 
-            if (result.error()) {
+            if (
+                result.error()
+            ) {
 
                 showError(
-                    'Не удалось получить лид: ' +
+                    'Не удалось получить '
+                    +
+                    (
+                        entityType === 'DEAL'
+                        ?
+                        'сделку'
+                        :
+                        'лид'
+                    )
+                    +
+                    ': '
+                    +
                     result.error_description()
                 );
 
@@ -552,47 +766,70 @@ function loadLead() {
             }
 
 
-            lead =
-                result.data();
+            entity =
+                result.data()
+                ||
+                {};
 
 
-            let title =
-                lead.TITLE
+            const fallbackTitle =
+                entityType === 'DEAL'
                 ?
-                lead.TITLE
+                'Сделка #' + entityId
                 :
-                'Лид #' + leadId;
+                'Лид #' + entityId;
 
 
-            document.getElementById(
-                'leadInfo'
-            ).textContent =
-                'Лид: ' + title;
+            const title =
+                entity.TITLE
+                ||
+                fallbackTitle;
+
+
+            document
+                .getElementById(
+                    'entityInfo'
+                )
+                .textContent =
+                (
+                    entityType === 'DEAL'
+                    ?
+                    'Сделка: '
+                    :
+                    'Лид: '
+                )
+                +
+                title;
 
 
             /*
              * По умолчанию ставим ответственным
-             * за тест-драйв ответственного за лид.
+             * ответственного за текущий CRM-элемент.
              */
 
             const assignedById =
                 Number(
-                    lead.ASSIGNED_BY_ID
+                    entity.ASSIGNED_BY_ID
+                    ||
+                    0
                 );
 
 
-            if (assignedById) {
+            if (
+                assignedById
+            ) {
 
-                document.getElementById(
-                    'responsible_id'
-                ).value =
+                document
+                    .getElementById(
+                        'responsible_id'
+                    )
+                    .value =
                     assignedById;
 
 
                 loadResponsibleName(
                     assignedById
                 );
-
             }
         }
     );
@@ -602,7 +839,6 @@ function loadLead() {
 /*
  * ==============================
  * ЗАГРУЖАЕМ ИМЯ ОТВЕТСТВЕННОГО
- * ИЗ ЛИДА
  * ==============================
  */
 
@@ -611,6 +847,7 @@ function loadResponsibleName(
 ) {
 
     BX24.callMethod(
+
         'user.get',
 
         {
@@ -618,20 +855,35 @@ function loadResponsibleName(
                 userId
         },
 
-        function (result) {
+        function (
+            result
+        ) {
 
-            if (result.error()) {
+            const entityName =
+                entityType === 'DEAL'
+                ?
+                'сделку'
+                :
+                'лид';
 
-                /*
-                 * ID уже сохранён, поэтому
-                 * тест-драйв всё равно можно создать.
-                 */
 
-                document.getElementById(
-                    'responsible_name'
-                ).value =
-                    'Ответственный за лид (ID ' +
-                    userId +
+            if (
+                result.error()
+            ) {
+
+                document
+                    .getElementById(
+                        'responsible_name'
+                    )
+                    .value =
+                    'Ответственный за '
+                    +
+                    entityName
+                    +
+                    ' (ID '
+                    +
+                    userId
+                    +
                     ')';
 
 
@@ -650,16 +902,26 @@ function loadResponsibleName(
 
 
             if (
-                !Array.isArray(users)
+                !Array.isArray(
+                    users
+                )
                 ||
                 users.length === 0
             ) {
 
-                document.getElementById(
-                    'responsible_name'
-                ).value =
-                    'Ответственный за лид (ID ' +
-                    userId +
+                document
+                    .getElementById(
+                        'responsible_name'
+                    )
+                    .value =
+                    'Ответственный за '
+                    +
+                    entityName
+                    +
+                    ' (ID '
+                    +
+                    userId
+                    +
                     ')';
 
                 return;
@@ -675,21 +937,33 @@ function loadResponsibleName(
                     user.NAME,
                     user.LAST_NAME
                 ]
-                .filter(Boolean)
-                .join(' ')
+                .filter(
+                    Boolean
+                )
+                .join(
+                    ' '
+                )
                 .trim();
 
 
-            document.getElementById(
-                'responsible_name'
-            ).value =
+            document
+                .getElementById(
+                    'responsible_name'
+                )
+                .value =
                 fullName
-                ?
-                fullName
-                :
-                'Ответственный за лид (ID ' +
-                userId +
-                ')';
+                ||
+                (
+                    'Ответственный за '
+                    +
+                    entityName
+                    +
+                    ' (ID '
+                    +
+                    userId
+                    +
+                    ')'
+                );
         }
     );
 }
@@ -705,25 +979,101 @@ function loadResponsibleName(
 function selectResponsible() {
 
     BX24.selectUser(
-        function (user) {
+        function (
+            user
+        ) {
 
-            if (!user) {
+            if (
+                !user
+            ) {
+
                 return;
             }
 
 
-            document.getElementById(
-                'responsible_id'
-            ).value =
+            document
+                .getElementById(
+                    'responsible_id'
+                )
+                .value =
                 user.id;
 
 
-            document.getElementById(
-                'responsible_name'
-            ).value =
+            document
+                .getElementById(
+                    'responsible_name'
+                )
+                .value =
                 user.name;
         }
     );
+}
+
+
+/*
+ * ==============================
+ * ПАРАМЕТРЫ КНОПКИ РЕЗУЛЬТАТА
+ * ==============================
+ */
+
+function buildResultActionParams(
+    result,
+    car,
+    start,
+    responsibleId,
+    responsibleName
+) {
+
+    const params = {
+
+        mode:
+            'testdrive_result',
+
+        result:
+            result,
+
+        entityType:
+            entityType,
+
+        entityId:
+            entityId,
+
+        car:
+            car,
+
+        date:
+            formatDateTime(
+                start
+            ),
+
+        responsibleId:
+            responsibleId,
+
+        responsibleName:
+            responsibleName
+    };
+
+
+    /*
+     * Оставляем старый leadId для совместимости,
+     * пока весь проект переводится на сделки.
+     */
+
+    if (
+        entityType === 'DEAL'
+    ) {
+
+        params.dealId =
+            entityId;
+
+    } else {
+
+        params.leadId =
+            entityId;
+    }
+
+
+    return params;
 }
 
 
@@ -735,65 +1085,80 @@ function selectResponsible() {
 
 function createTestDrive() {
 
-    const leadId =
+    entityId =
         Number(
-            document.getElementById(
-                'lead_id'
-            ).value
+            document
+                .getElementById(
+                    'entity_id'
+                )
+                .value
+            ||
+            0
         );
 
 
     const datetimeValue =
-        document.getElementById(
-            'datetime'
-        ).value;
-
+        document
+            .getElementById(
+                'datetime'
+            )
+            .value;
 
 
     const car =
-        document.getElementById(
-            'car'
-        ).value.trim();
-
-
-   
+        document
+            .getElementById(
+                'car'
+            )
+            .value
+            .trim();
 
 
     const responsibleId =
         Number(
-            document.getElementById(
-                'responsible_id'
-            ).value
+            document
+                .getElementById(
+                    'responsible_id'
+                )
+                .value
+            ||
+            0
         );
 
 
     const responsibleName =
-        document.getElementById(
-            'responsible_name'
-        ).value.trim();
+        document
+            .getElementById(
+                'responsible_name'
+            )
+            .value
+            .trim();
 
 
     const comment =
-        document.getElementById(
-            'comment'
-        ).value.trim();
+        document
+            .getElementById(
+                'comment'
+            )
+            .value
+            .trim();
 
 
-    /*
-     * ПРОВЕРКИ
-     */
-
-    if (!leadId) {
+    if (
+        !entityId
+    ) {
 
         showError(
-            'Не определён лид'
+            'Не определён CRM-элемент'
         );
 
         return;
     }
 
 
-    if (!datetimeValue) {
+    if (
+        !datetimeValue
+    ) {
 
         showError(
             'Укажите дату и время тест-драйва'
@@ -803,7 +1168,9 @@ function createTestDrive() {
     }
 
 
-    if (!car) {
+    if (
+        !car
+    ) {
 
         showError(
             'Укажите автомобиль'
@@ -813,7 +1180,9 @@ function createTestDrive() {
     }
 
 
-    if (!responsibleId) {
+    if (
+        !responsibleId
+    ) {
 
         showError(
             'Выберите ответственного за тест-драйв'
@@ -843,21 +1212,12 @@ function createTestDrive() {
     }
 
 
-    
+    setLoading(
+        true
+    );
 
-
-    setLoading(true);
-
-
-    /*
-     * ==============================
-     * СОБИРАЕМ КРАСИВУЮ КАРТОЧКУ
-     * ДЛЯ ТАЙМЛАЙНА
-     * ==============================
-     */
 
     const blocks = {
-
 
         date: {
 
@@ -887,9 +1247,6 @@ function createTestDrive() {
                 }
             }
         },
-
-
-      
 
 
         car: {
@@ -956,18 +1313,9 @@ function createTestDrive() {
     };
 
 
-    /*
-     * Место добавляем только если заполнено.
-     */
-
-    
-
-
-    /*
-     * Комментарий добавляем только если есть.
-     */
-
-    if (comment) {
+    if (
+        comment
+    ) {
 
         blocks.comment = {
 
@@ -991,20 +1339,15 @@ function createTestDrive() {
 
                         value:
                             comment,
-                            multiline:
-                                    true
+
+                        multiline:
+                            true
                     }
                 }
             }
         };
     }
 
-
-    /*
-     * ==============================
-     * СОЗДАЁМ КОНФИГУРИРУЕМОЕ ДЕЛО
-     * ==============================
-     */
 
     BX24.callMethod(
 
@@ -1013,229 +1356,175 @@ function createTestDrive() {
         {
 
             ownerTypeId:
-                1,
+                ownerTypeId,
 
             ownerId:
-                leadId,
+                entityId,
 
 
             fields: {
 
-                /*
-                 * Не указываем свой typeId.
-                 * Битрикс использует CONFIGURABLE.
-                 */
-
                 completed:
                     false,
-
-
-                /*
-                 * Срок дела =
-                 * время начала тест-драйва.
-                 */
 
                 deadline:
                     start.toISOString(),
 
-
-                /*
-                 * Напоминания:
-                 * за 60 минут
-                 * и за 15 минут.
-                 */
-
-                
-
                 isIncomingChannel:
                     false,
-
 
                 responsibleId:
                     responsibleId,
 
-
                 originatorId:
                     'TEST_DRIVE_APP',
 
-
                 originId:
-                    'TD_' +
-                    leadId +
-                    '_' +
+                    'TD_'
+                    +
+                    entityType
+                    +
+                    '_'
+                    +
+                    entityId
+                    +
+                    '_'
+                    +
                     Date.now()
             },
 
 
-            /*
-             * ==============================
-             * ВНЕШНИЙ ВИД В ТАЙМЛАЙНЕ
-             * ==============================
-             */
+            layout: {
 
-           layout: {
+                icon: {
 
-    icon: {
-
-        code:
-            'testdrive-car-icon-v1'
-    },
+                    code:
+                        'testdrive-car-icon-v1'
+                },
 
 
-    header: {
+                header: {
 
-        title:
-            'Тест-драйв — ' +
-            car
-    },
-
-
-    body: {
-
-        logo: {
-
-            code:
-                'testdrive-car-logo-v1'
-        },
-
-        blocks:
-            blocks
-    },
+                    title:
+                        'Тест-драйв — '
+                        +
+                        car
+                },
 
 
-    /*
-     * ==================================
-     * КНОПКИ РЕЗУЛЬТАТА ТЕСТ-ДРАЙВА
-     * ==================================
-     */
+                body: {
 
-    footer: {
+                    logo: {
 
-        buttons: {
-
-
-            passed: {
-
-                title:
-                    'Тест-драйв пройден',
-
-                type:
-                    'primary',
-
-                action: {
-
-                    type:
-                        'openRestApp',
-
-                    actionParams: {
-
-                        mode:
-                            'testdrive_result',
-
-                        result:
-                            'passed',
-
-                        leadId:
-                            leadId,
-
-                        car:
-                            car,
-
-                        date:
-                            formatDateTime(start),
-
-                      
-
-                      
-                        responsibleId:
-                            responsibleId,
-
-                        responsibleName:
-                            responsibleName
+                        code:
+                            'testdrive-car-logo-v1'
                     },
 
-                    sliderParams: {
-
-                        title:
-                            'Результат тест-драйва',
-
-                        width:
-                            720
-                    }
-                }
-            },
+                    blocks:
+                        blocks
+                },
 
 
-            failed: {
+                footer: {
 
-                title:
-                    'Не состоялся',
+                    buttons: {
 
-                type:
-                    'secondary',
 
-                action: {
+                        passed: {
 
-                    type:
-                        'openRestApp',
+                            title:
+                                'Тест-драйв пройден',
 
-                    actionParams: {
+                            type:
+                                'primary',
 
-                        mode:
-                            'testdrive_result',
+                            action: {
 
-                        result:
-                            'failed',
+                                type:
+                                    'openRestApp',
 
-                        leadId:
-                            leadId,
+                                actionParams:
+                                    buildResultActionParams(
+                                        'passed',
+                                        car,
+                                        start,
+                                        responsibleId,
+                                        responsibleName
+                                    ),
 
-                        car:
-                            car,
+                                sliderParams: {
 
-                        date:
-                            formatDateTime(start),
+                                    title:
+                                        'Результат тест-драйва',
 
-                      
+                                    width:
+                                        720
+                                }
+                            }
+                        },
 
-                        
 
-                        responsibleId:
-                            responsibleId,
+                        failed: {
 
-                        responsibleName:
-                            responsibleName
-                    },
+                            title:
+                                'Не состоялся',
 
-                    sliderParams: {
+                            type:
+                                'secondary',
 
-                        title:
-                            'Тест-драйв не состоялся',
+                            action: {
 
-                        width:
-                            650
+                                type:
+                                    'openRestApp',
+
+                                actionParams:
+                                    buildResultActionParams(
+                                        'failed',
+                                        car,
+                                        start,
+                                        responsibleId,
+                                        responsibleName
+                                    ),
+
+                                sliderParams: {
+
+                                    title:
+                                        'Тест-драйв не состоялся',
+
+                                    width:
+                                        650
+                                }
+                            }
+                        }
+
                     }
                 }
             }
-        }
-    }
-}
-
         },
 
 
-        function (result) {
+        function (
+            result
+        ) {
 
-            if (result.error()) {
+            if (
+                result.error()
+            ) {
 
-                setLoading(false);
+                setLoading(
+                    false
+                );
 
                 showError(
-                    'Ошибка создания тест-драйва: ' +
-                    result.error() +
-                    ' — ' +
+                    'Ошибка создания тест-драйва: '
+                    +
+                    result.error()
+                    +
+                    ' — '
+                    +
                     result.error_description()
                 );
+
 
                 console.error(
                     result.error(),
@@ -1252,30 +1541,41 @@ function createTestDrive() {
             );
 
 
-            /*
-             * После создания
-             * переводим лид в "В работе".
-             */
-
-            moveLeadToWork(
-                leadId
-            );
-
+            moveEntityToWork();
         }
     );
-
 }
 
 
 /*
  * ==============================
- * ПЕРЕВОД ЛИДА В "В РАБОТЕ"
+ * ПЕРЕВОДИМ В "В РАБОТЕ"
  * ==============================
  */
 
-function moveLeadToWork(
-    leadId
-) {
+function moveEntityToWork() {
+
+    if (
+        entityType === 'DEAL'
+    ) {
+
+        moveDealToWork();
+
+        return;
+    }
+
+
+    moveLeadToWork();
+}
+
+
+/*
+ * ==============================
+ * ЛИД → "В РАБОТЕ"
+ * ==============================
+ */
+
+function moveLeadToWork() {
 
     BX24.callMethod(
 
@@ -1295,18 +1595,17 @@ function moveLeadToWork(
         },
 
 
-        function (result) {
+        function (
+            result
+        ) {
 
-            /*
-             * Даже если стадия
-             * не найдена —
-             * тест-драйв уже создан.
-             */
-
-            if (result.error()) {
+            if (
+                result.error()
+            ) {
 
                 finishSuccess(
-                    'Тест-драйв назначен. ' +
+                    'Тест-драйв назначен. '
+                    +
                     'Но не удалось проверить стадию лида.'
                 );
 
@@ -1314,33 +1613,19 @@ function moveLeadToWork(
             }
 
 
-            const statuses =
-                result.data();
-
-
             const workStatus =
-                statuses.find(
-                    function (status) {
-
-                        return (
-                            status.NAME
-                            &&
-                            status.NAME
-                                .trim()
-                                .toLowerCase()
-                            ===
-                            WORK_STAGE_NAME
-                                .trim()
-                                .toLowerCase()
-                        );
-                    }
+                findWorkStage(
+                    result.data()
                 );
 
 
-            if (!workStatus) {
+            if (
+                !workStatus
+            ) {
 
                 finishSuccess(
-                    'Тест-драйв назначен. ' +
+                    'Тест-драйв назначен. '
+                    +
                     'Стадия «В работе» не найдена.'
                 );
 
@@ -1355,7 +1640,7 @@ function moveLeadToWork(
                 {
 
                     id:
-                        leadId,
+                        entityId,
 
                     fields: {
 
@@ -1374,7 +1659,8 @@ function moveLeadToWork(
                     ) {
 
                         finishSuccess(
-                            'Тест-драйв назначен, ' +
+                            'Тест-драйв назначен, '
+                            +
                             'но стадия лида не изменилась.'
                         );
 
@@ -1383,16 +1669,192 @@ function moveLeadToWork(
 
 
                     finishSuccess(
-                        'Тест-драйв назначен. ' +
+                        'Тест-драйв назначен. '
+                        +
                         'Лид переведён в «В работе».'
                     );
-
                 }
             );
-
         }
     );
+}
 
+
+/*
+ * ==============================
+ * СДЕЛКА → "В РАБОТЕ"
+ * ==============================
+ */
+
+function moveDealToWork() {
+
+    const categoryId =
+        Number(
+            entity
+            &&
+            entity.CATEGORY_ID
+            ||
+            0
+        );
+
+
+    const statusEntityId =
+        categoryId > 0
+        ?
+        'DEAL_STAGE_' + categoryId
+        :
+        'DEAL_STAGE';
+
+
+    BX24.callMethod(
+
+        'crm.status.list',
+
+        {
+
+            order: {
+                SORT:
+                    'ASC'
+            },
+
+            filter: {
+                ENTITY_ID:
+                    statusEntityId
+            }
+        },
+
+
+        function (
+            result
+        ) {
+
+            if (
+                result.error()
+            ) {
+
+                finishSuccess(
+                    'Тест-драйв назначен. '
+                    +
+                    'Но не удалось проверить стадию сделки.'
+                );
+
+                return;
+            }
+
+
+            const workStatus =
+                findWorkStage(
+                    result.data()
+                );
+
+
+            if (
+                !workStatus
+            ) {
+
+                finishSuccess(
+                    'Тест-драйв назначен. '
+                    +
+                    'В этой воронке нет стадии «В работе».'
+                );
+
+                return;
+            }
+
+
+            BX24.callMethod(
+
+                'crm.deal.update',
+
+                {
+
+                    id:
+                        entityId,
+
+                    fields: {
+
+                        STAGE_ID:
+                            workStatus.STATUS_ID
+                    }
+                },
+
+
+                function (
+                    updateResult
+                ) {
+
+                    if (
+                        updateResult.error()
+                    ) {
+
+                        finishSuccess(
+                            'Тест-драйв назначен, '
+                            +
+                            'но стадия сделки не изменилась.'
+                        );
+
+                        return;
+                    }
+
+
+                    finishSuccess(
+                        'Тест-драйв назначен. '
+                        +
+                        'Сделка переведена в «В работе».'
+                    );
+                }
+            );
+        }
+    );
+}
+
+
+/*
+ * ==============================
+ * ИЩЕМ СТАДИЮ "В РАБОТЕ"
+ * ==============================
+ */
+
+function findWorkStage(
+    statuses
+) {
+
+    if (
+        !Array.isArray(
+            statuses
+        )
+    ) {
+
+        return null;
+    }
+
+
+    return (
+        statuses.find(
+            function (
+                status
+            ) {
+
+                return (
+                    status
+                    &&
+                    status.NAME
+                    &&
+                    String(
+                        status.NAME
+                    )
+                    .trim()
+                    .toLowerCase()
+                    ===
+                    WORK_STAGE_NAME
+                        .trim()
+                        .toLowerCase()
+                );
+            }
+        )
+        ||
+        null
+    );
 }
 
 
@@ -1406,17 +1868,14 @@ function finishSuccess(
     text
 ) {
 
-    setLoading(false);
+    setLoading(
+        false
+    );
 
     showSuccess(
         text
     );
 
-
-    /*
-     * Через секунду просим
-     * Битрикс обновить карточку.
-     */
 
     setTimeout(
         function () {
@@ -1425,10 +1884,8 @@ function finishSuccess(
                 function () {
 
                     BX24.closeApplication();
-
                 }
             );
-
         },
         1200
     );
@@ -1448,6 +1905,7 @@ function formatDateTime(
     return date.toLocaleString(
         'ru-RU',
         {
+
             day:
                 '2-digit',
 
@@ -1469,14 +1927,6 @@ function formatDateTime(
 
 /*
  * ==============================
- * ФОРМАТ ДЛИТЕЛЬНОСТИ
- * ==============================
- */
-
-
-
-/*
- * ==============================
  * ИНТЕРФЕЙС
  * ==============================
  */
@@ -1486,9 +1936,10 @@ function setLoading(
 ) {
 
     const button =
-        document.getElementById(
-            'createButton'
-        );
+        document
+            .getElementById(
+                'createButton'
+            );
 
 
     button.disabled =
@@ -1509,9 +1960,10 @@ function showError(
 ) {
 
     const message =
-        document.getElementById(
-            'message'
-        );
+        document
+            .getElementById(
+                'message'
+            );
 
 
     message.className =
@@ -1528,9 +1980,10 @@ function showSuccess(
 ) {
 
     const message =
-        document.getElementById(
-            'message'
-        );
+        document
+            .getElementById(
+                'message'
+            );
 
 
     message.className =
@@ -1542,7 +1995,6 @@ function showSuccess(
 }
 
 </script>
-
 
 </body>
 </html>
