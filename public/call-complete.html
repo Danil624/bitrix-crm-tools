@@ -236,15 +236,14 @@
 
 <script>
 
-let LEAD_ID = 0;
-
+let ENTITY_ID = 0;
+let ENTITY_TYPE = '';
+let OWNER_TYPE_ID = 0;
 
 let ACTIVITY_ID = 0;
 
-
 const CALL_RESULT_FIELD_TITLE =
     'Результат звонка';
-
 
 let fieldCode =
     '';
@@ -265,28 +264,54 @@ let activity =
 BX24.init(
     function () {
 
-        BX24.resizeWindow(
-            680,
-            520
-        );
+        try {
+
+            BX24.resizeWindow(
+                680,
+                520
+            );
+
+        } catch (e) {
+        }
 
 
-        var placementInfo =
-            BX24.placement.info();
-
-        var placementOptions =
-            placementInfo
-            &&
-            placementInfo.options
-            ?
-            placementInfo.options
-            :
+        const placementInfo =
+            BX24.placement.info()
+            ||
             {};
 
 
-        LEAD_ID =
+        let placementOptions =
+            placementInfo.options
+            ||
+            {};
+
+
+        if (
+            typeof placementOptions ===
+            'string'
+        ) {
+
+            try {
+
+                placementOptions =
+                    JSON.parse(
+                        placementOptions
+                    );
+
+            } catch (e) {
+
+                placementOptions =
+                    {};
+            }
+        }
+
+
+        ENTITY_ID =
             Number(
                 placementOptions.ENTITY_ID
+                ||
+                placementOptions.OWNER_ID
                 ||
                 placementOptions.ID
                 ||
@@ -304,14 +329,10 @@ BX24.init(
             );
 
 
-        if (!LEAD_ID) {
-
-            showError(
-                'Не удалось определить ID лида.'
-            );
-
-            return;
-        }
+        detectEntityType(
+            placementInfo,
+            placementOptions
+        );
 
 
         if (!ACTIVITY_ID) {
@@ -327,6 +348,133 @@ BX24.init(
         loadActivity();
     }
 );
+
+
+/*
+ * =========================================================
+ * ОПРЕДЕЛЯЕМ ТИП CRM-СУЩНОСТИ
+ * =========================================================
+ */
+
+function detectEntityType(
+    placementInfo,
+    options
+) {
+
+    const placement =
+        String(
+            placementInfo
+            &&
+            placementInfo.placement
+            ||
+            ''
+        )
+        .toUpperCase();
+
+
+    if (
+        placement.indexOf(
+            'CRM_DEAL'
+        ) !== -1
+    ) {
+
+        ENTITY_TYPE =
+            'DEAL';
+
+        OWNER_TYPE_ID =
+            2;
+
+        return;
+    }
+
+
+    if (
+        placement.indexOf(
+            'CRM_LEAD'
+        ) !== -1
+    ) {
+
+        ENTITY_TYPE =
+            'LEAD';
+
+        OWNER_TYPE_ID =
+            1;
+
+        return;
+    }
+
+
+    const typeId =
+        Number(
+            options.ENTITY_TYPE_ID
+            ||
+            options.entityTypeId
+            ||
+            options.OWNER_TYPE_ID
+            ||
+            options.ownerTypeId
+            ||
+            0
+        );
+
+
+    if (
+        typeId === 2
+    ) {
+
+        ENTITY_TYPE =
+            'DEAL';
+
+        OWNER_TYPE_ID =
+            2;
+
+        return;
+    }
+
+
+    if (
+        typeId === 1
+    ) {
+
+        ENTITY_TYPE =
+            'LEAD';
+
+        OWNER_TYPE_ID =
+            1;
+
+        return;
+    }
+
+
+    if (
+        options.DEAL_ID
+        ||
+        options.dealId
+    ) {
+
+        ENTITY_TYPE =
+            'DEAL';
+
+        OWNER_TYPE_ID =
+            2;
+
+        return;
+    }
+
+
+    if (
+        options.LEAD_ID
+        ||
+        options.leadId
+    ) {
+
+        ENTITY_TYPE =
+            'LEAD';
+
+        OWNER_TYPE_ID =
+            1;
+    }
+}
 
 
 /*
@@ -347,10 +495,13 @@ function loadActivity() {
 
         function (result) {
 
-            if (result.error()) {
+            if (
+                result.error()
+            ) {
 
                 showError(
-                    'Не удалось получить дело: ' +
+                    'Не удалось получить дело: '
+                    +
                     result.error_description()
                 );
 
@@ -359,7 +510,9 @@ function loadActivity() {
 
 
             activity =
-                result.data() || {};
+                result.data()
+                ||
+                {};
 
 
             /*
@@ -382,19 +535,163 @@ function loadActivity() {
             }
 
 
-            document.getElementById(
-                'info'
-            ).textContent =
-                'Звонок #' +
-                ACTIVITY_ID +
-                ' · Лид #' +
-                LEAD_ID;
+            /*
+             * Если placement не дал тип/ID,
+             * берём владельца самого дела.
+             */
+
+            if (
+                !OWNER_TYPE_ID
+            ) {
+
+                OWNER_TYPE_ID =
+                    Number(
+                        activity.OWNER_TYPE_ID
+                        ||
+                        0
+                    );
+            }
+
+
+            if (
+                !ENTITY_ID
+            ) {
+
+                ENTITY_ID =
+                    Number(
+                        activity.OWNER_ID
+                        ||
+                        0
+                    );
+            }
+
+
+            if (
+                OWNER_TYPE_ID === 2
+            ) {
+
+                ENTITY_TYPE =
+                    'DEAL';
+
+            } else if (
+                OWNER_TYPE_ID === 1
+            ) {
+
+                ENTITY_TYPE =
+                    'LEAD';
+            }
+
+
+            if (
+                !ENTITY_ID
+                ||
+                (
+                    ENTITY_TYPE !== 'DEAL'
+                    &&
+                    ENTITY_TYPE !== 'LEAD'
+                )
+            ) {
+
+                showError(
+                    'Не удалось определить CRM-элемент звонка.'
+                );
+
+                return;
+            }
+
+
+            document
+                .getElementById(
+                    'info'
+                )
+                .textContent =
+                'Звонок #'
+                +
+                ACTIVITY_ID
+                +
+                ' · '
+                +
+                (
+                    ENTITY_TYPE === 'DEAL'
+                    ?
+                    'Сделка #'
+                    :
+                    'Лид #'
+                )
+                +
+                ENTITY_ID;
 
 
             findCallResultField(
                 0
             );
         }
+    );
+}
+
+
+/*
+ * =========================================================
+ * REST-МЕТОДЫ ДЛЯ ТЕКУЩЕЙ СУЩНОСТИ
+ * =========================================================
+ */
+
+function userfieldListMethod() {
+
+    return (
+        ENTITY_TYPE === 'DEAL'
+        ?
+        'crm.deal.userfield.list'
+        :
+        'crm.lead.userfield.list'
+    );
+}
+
+
+function userfieldGetMethod() {
+
+    return (
+        ENTITY_TYPE === 'DEAL'
+        ?
+        'crm.deal.userfield.get'
+        :
+        'crm.lead.userfield.get'
+    );
+}
+
+
+function fieldsMethod() {
+
+    return (
+        ENTITY_TYPE === 'DEAL'
+        ?
+        'crm.deal.fields'
+        :
+        'crm.lead.fields'
+    );
+}
+
+
+function updateMethod() {
+
+    return (
+        ENTITY_TYPE === 'DEAL'
+        ?
+        'crm.deal.update'
+        :
+        'crm.lead.update'
+    );
+}
+
+
+function entityNameGenitive() {
+
+    return (
+        ENTITY_TYPE === 'DEAL'
+        ?
+        'сделки'
+        :
+        'лида'
     );
 }
 
@@ -410,7 +707,7 @@ function findCallResultField(
 ) {
 
     BX24.callMethod(
-        'crm.lead.userfield.list',
+        userfieldListMethod(),
 
         {
             order: {
@@ -437,10 +734,17 @@ function findCallResultField(
 
         function (result) {
 
-            if (result.error()) {
+            if (
+                result.error()
+            ) {
 
                 showError(
-                    'Не удалось получить пользовательские поля лида: ' +
+                    'Не удалось получить пользовательские поля '
+                    +
+                    entityNameGenitive()
+                    +
+                    ': '
+                    +
                     result.error_description()
                 );
 
@@ -449,7 +753,9 @@ function findCallResultField(
 
 
             const fields =
-                result.data() || [];
+                result.data()
+                ||
+                [];
 
 
             const target =
@@ -463,21 +769,29 @@ function findCallResultField(
                 );
 
 
-            if (target) {
+            if (
+                target
+            ) {
 
                 fieldCode =
                     String(
-                        target.FIELD_NAME || ''
+                        target.FIELD_NAME
+                        ||
+                        ''
                     );
 
 
                 fieldId =
                     Number(
-                        target.ID || 0
+                        target.ID
+                        ||
+                        0
                     );
 
 
-                if (!fieldCode) {
+                if (
+                    !fieldCode
+                ) {
 
                     showError(
                         'У поля «Результат звонка» не найден FIELD_NAME.'
@@ -511,7 +825,7 @@ function findCallResultField(
 
             if (
                 typeof result.more ===
-                    'function'
+                'function'
                 &&
                 result.more()
             ) {
@@ -529,7 +843,9 @@ function findCallResultField(
                 ) {
 
                     findCallResultField(
-                        Number(next)
+                        Number(
+                            next
+                        )
                     );
 
                     return;
@@ -538,7 +854,11 @@ function findCallResultField(
 
 
             showError(
-                'Не найдено поле списка «Результат звонка».'
+                'Не найдено поле списка «Результат звонка» в '
+                +
+                entityNameGenitive()
+                +
+                '.'
             );
         }
     );
@@ -573,11 +893,13 @@ function isTargetField(
                 label
                 &&
                 typeof label ===
-                    'object'
+                'object'
             ) {
 
                 label =
-                    label.ru || '';
+                    label.ru
+                    ||
+                    '';
             }
 
 
@@ -601,7 +923,9 @@ function isTargetField(
 
 function loadFieldById() {
 
-    if (!fieldId) {
+    if (
+        !fieldId
+    ) {
 
         loadOptionsFallback();
 
@@ -610,7 +934,7 @@ function loadFieldById() {
 
 
     BX24.callMethod(
-        'crm.lead.userfield.get',
+        userfieldGetMethod(),
 
         {
             id:
@@ -619,7 +943,9 @@ function loadFieldById() {
 
         function (result) {
 
-            if (result.error()) {
+            if (
+                result.error()
+            ) {
 
                 loadOptionsFallback();
 
@@ -628,7 +954,9 @@ function loadFieldById() {
 
 
             const field =
-                result.data() || {};
+                result.data()
+                ||
+                {};
 
 
             if (
@@ -656,13 +984,15 @@ function loadFieldById() {
 function loadOptionsFallback() {
 
     BX24.callMethod(
-        'crm.lead.fields',
+        fieldsMethod(),
 
         {},
 
         function (result) {
 
-            if (result.error()) {
+            if (
+                result.error()
+            ) {
 
                 showError(
                     'Не удалось получить варианты поля.'
@@ -673,7 +1003,9 @@ function loadOptionsFallback() {
 
 
             const fields =
-                result.data() || {};
+                result.data()
+                ||
+                {};
 
 
             const field =
@@ -682,7 +1014,9 @@ function loadOptionsFallback() {
                 ];
 
 
-            if (!field) {
+            if (
+                !field
+            ) {
 
                 showError(
                     'Описание поля «Результат звонка» недоступно.'
@@ -710,7 +1044,9 @@ function loadOptionsFallback() {
                 );
 
 
-            if (!items.length) {
+            if (
+                !items.length
+            ) {
 
                 showError(
                     'У поля «Результат звонка» нет вариантов.'
@@ -739,9 +1075,10 @@ function fillOptions(
 ) {
 
     const select =
-        document.getElementById(
-            'callResult'
-        );
+        document
+            .getElementById(
+                'callResult'
+            );
 
 
     select.innerHTML =
@@ -796,6 +1133,7 @@ function fillOptions(
                 ||
                 !value
             ) {
+
                 return;
             }
 
@@ -805,6 +1143,7 @@ function fillOptions(
                     value
                 )
             ) {
+
                 return;
             }
 
@@ -845,9 +1184,11 @@ function fillOptions(
         false;
 
 
-    document.getElementById(
-        'saveButton'
-    ).disabled =
+    document
+        .getElementById(
+            'saveButton'
+        )
+        .disabled =
         false;
 }
 
@@ -861,18 +1202,23 @@ function fillOptions(
 function saveAndComplete() {
 
     const select =
-        document.getElementById(
-            'callResult'
-        );
+        document
+            .getElementById(
+                'callResult'
+            );
 
 
     const enumId =
         String(
-            select.value || ''
+            select.value
+            ||
+            ''
         );
 
 
-    if (!enumId) {
+    if (
+        !enumId
+    ) {
 
         showError(
             'Выберите результат звонка.'
@@ -899,38 +1245,38 @@ function saveAndComplete() {
     );
 
 
-    const leadFields =
+    const entityFields =
         {};
 
 
-    leadFields[
+    entityFields[
         fieldCode
     ] =
         enumId;
 
 
     /*
-     * Сначала записываем результат в лид.
+     * Сначала записываем результат
+     * в лид/сделку.
      * Только потом закрываем дело.
-     *
-     * Поэтому activity-guard увидит уже
-     * заполненное поле и не переоткроет звонок.
      */
 
     BX24.callMethod(
-        'crm.lead.update',
+        updateMethod(),
 
         {
             id:
-                LEAD_ID,
+                ENTITY_ID,
 
             fields:
-                leadFields
+                entityFields
         },
 
-        function (leadResult) {
+        function (entityResult) {
 
-            if (leadResult.error()) {
+            if (
+                entityResult.error()
+            ) {
 
                 setLoading(
                     false
@@ -938,8 +1284,9 @@ function saveAndComplete() {
 
 
                 showError(
-                    'Не удалось сохранить результат звонка: ' +
-                    leadResult.error_description()
+                    'Не удалось сохранить результат звонка: '
+                    +
+                    entityResult.error_description()
                 );
 
                 return;
@@ -959,14 +1306,14 @@ function saveAndComplete() {
                             Number(
                                 activity.OWNER_ID
                                 ||
-                                LEAD_ID
+                                ENTITY_ID
                             ),
 
                         OWNER_TYPE_ID:
                             Number(
                                 activity.OWNER_TYPE_ID
                                 ||
-                                1
+                                OWNER_TYPE_ID
                             ),
 
                         TYPE_ID:
@@ -989,7 +1336,8 @@ function saveAndComplete() {
 
 
                         showError(
-                            'Результат сохранён, но звонок не удалось завершить: ' +
+                            'Результат сохранён, но звонок не удалось завершить: '
+                            +
                             activityResult.error_description()
                         );
 
@@ -998,7 +1346,8 @@ function saveAndComplete() {
 
 
                     showSuccess(
-                        'Звонок завершён. Результат: ' +
+                        'Звонок завершён. Результат: '
+                        +
                         resultText
                     );
 
@@ -1034,7 +1383,9 @@ function normalizeText(
 ) {
 
     return String(
-        value || ''
+        value
+        ||
+        ''
     )
     .trim()
     .toLowerCase()
@@ -1057,16 +1408,16 @@ function isEmptyResult(
 
     return (
         normalized ===
-            'не выбрано'
+        'не выбрано'
         ||
         normalized ===
-            'не выбран'
+        'не выбран'
         ||
         normalized ===
-            'не выбрана'
+        'не выбрана'
         ||
         normalized ===
-            'не выбрано.'
+        'не выбрано.'
     );
 }
 
@@ -1076,9 +1427,10 @@ function setLoading(
 ) {
 
     const button =
-        document.getElementById(
-            'saveButton'
-        );
+        document
+            .getElementById(
+                'saveButton'
+            );
 
 
     button.disabled =
@@ -1099,9 +1451,10 @@ function showError(
 ) {
 
     const message =
-        document.getElementById(
-            'message'
-        );
+        document
+            .getElementById(
+                'message'
+            );
 
 
     message.className =
@@ -1118,9 +1471,10 @@ function showSuccess(
 ) {
 
     const message =
-        document.getElementById(
-            'message'
-        );
+        document
+            .getElementById(
+                'message'
+            );
 
 
     message.className =
