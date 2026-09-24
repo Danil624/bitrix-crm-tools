@@ -86,7 +86,7 @@
             background: #fff7e6;
         }
 
-        .lead-actions {
+        .deal-actions {
             display: flex;
 
             margin-bottom: 16px;
@@ -94,11 +94,11 @@
             gap: 10px;
         }
 
-        .lead-actions.visible {
+        .deal-actions.visible {
             display: flex;
         }
 
-        .lead-actions button {
+        .deal-actions button {
             flex: 1;
 
             margin-top: 0;
@@ -238,21 +238,21 @@
 
     <div
         class="info"
-        id="leadInfo"
+        id="dealInfo"
     >
         Ожидаем данные текущего звонка...
     </div>
 
 
     <div
-        class="lead-actions"
-        id="leadActions"
+        class="deal-actions"
+        id="dealActions"
     >
 
         <button
             type="button"
-            id="createLeadButton"
-            onclick="createLeadManually()"
+            id="createDealButton"
+            onclick="createDealManually()"
             disabled
         >
             Ожидаем данные звонка...
@@ -261,12 +261,12 @@
 
         <button
             type="button"
-            id="openLeadButton"
+            id="openDealButton"
             class="button-secondary"
-            onclick="openLead()"
+            onclick="openDeal()"
             style="display:none;"
         >
-            Открыть лид
+            Открыть сделку
         </button>
 
     </div>
@@ -346,8 +346,20 @@ const CALL_RESULT_FIELD_TITLE =
     'Результат звонка';
 
 
-const LEAD_ORIGINATOR_ID =
+const DEAL_ORIGINATOR_ID =
     'CALL_RESULT_APP';
+
+
+const DEAL_CATEGORY_ID =
+    0;
+
+
+function getDealStageEntityId() {
+
+    return DEAL_CATEGORY_ID > 0
+        ? 'DEAL_STAGE_' + DEAL_CATEGORY_ID
+        : 'DEAL_STAGE';
+}
 
 
 /*
@@ -366,9 +378,9 @@ let currentCallState = '';
 
 let crmActivityId = 0;
 
-let leadId = 0;
+let dealId = 0;
 
-let leadCreationInProgress = false;
+let dealCreationInProgress = false;
 
 let activityBindingInProgress = false;
 
@@ -392,9 +404,9 @@ let statusPollAttempts = 0;
 
 let statusRequestInProgress = false;
 
-let existingLeadLookupInProgress = false;
+let existingDealLookupInProgress = false;
 
-let existingLeadLookupDoneForCallId = '';
+let existingDealLookupDoneForCallId = '';
 
 let resultOptionsLoaded = false;
 
@@ -442,11 +454,11 @@ BX24.init(function () {
 
 
     /*
-     * Сразу показываем кнопку создания лида.
+     * Сразу показываем кнопку создания сделки.
      * Пока CALL_ID не пришёл, она будет disabled.
      */
 
-    syncCreateLeadButtonState();
+    syncCreateDealButtonState();
 
 
     /*
@@ -596,7 +608,7 @@ function refreshCallStatus() {
 
                 if (!status) {
 
-                    syncCreateLeadButtonState();
+                    syncCreateDealButtonState();
 
                     return;
                 }
@@ -632,7 +644,7 @@ function refreshCallStatus() {
             'Виджет открыт. Ожидаем контекст звонка от Bitrix24...';
 
 
-        syncCreateLeadButtonState();
+        syncCreateDealButtonState();
     }
 }
 
@@ -691,15 +703,15 @@ function startStatusPolling() {
 
 /*
  * =========================================================
- * СОСТОЯНИЕ КНОПКИ СОЗДАНИЯ ЛИДА
+ * СОСТОЯНИЕ КНОПКИ СОЗДАНИЯ СДЕЛКИ
  * =========================================================
  */
 
-function syncCreateLeadButtonState() {
+function syncCreateDealButtonState() {
 
     var button =
         document.getElementById(
-            'createLeadButton'
+            'createDealButton'
         );
 
 
@@ -708,7 +720,7 @@ function syncCreateLeadButtonState() {
     }
 
 
-    if (leadId) {
+    if (dealId) {
 
         button.disabled =
             false;
@@ -725,36 +737,36 @@ function syncCreateLeadButtonState() {
 
 
     if (
-        existingLeadLookupInProgress
+        existingDealLookupInProgress
     ) {
 
         button.disabled =
             true;
 
         button.textContent =
-            'Ищем существующий лид...';
+            'Ищем существующую сделку...';
 
     } else if (
         callId
         &&
-        !leadCreationInProgress
+        !dealCreationInProgress
     ) {
 
         button.disabled =
             false;
 
         button.textContent =
-            '+ Создать лид';
+            '+ Создать сделку';
 
     } else if (
-        leadCreationInProgress
+        dealCreationInProgress
     ) {
 
         button.disabled =
             true;
 
         button.textContent =
-            'Создаём лид...';
+            'Создаём сделку...';
 
     } else {
 
@@ -788,9 +800,9 @@ function resetCallSessionForNewCall(
 
     /*
      * Если следующий звонок идёт тому же клиенту/номеру,
-     * сохраняем уже известный leadId.
+     * сохраняем уже известный dealId.
      * Иначе CALL_CARD после первого звонка терял привязку
-     * и снова показывал «+ Создать лид».
+     * и снова показывал «+ Создать сделку».
      */
 
     const oldPhoneDigits =
@@ -801,9 +813,9 @@ function resetCallSessionForNewCall(
         String(newPhoneNumber || '')
             .replace(/\D/g, '');
 
-    const preservedLeadId =
+    const preservedDealId =
         (
-            leadId > 0
+            dealId > 0
             &&
             oldPhoneDigits.length >= 10
             &&
@@ -812,7 +824,7 @@ function resetCallSessionForNewCall(
             oldPhoneDigits === newPhoneDigits
         )
         ?
-        leadId
+        dealId
         :
         0;
 
@@ -826,13 +838,13 @@ function resetCallSessionForNewCall(
     allowAutoClose =
         false;
 
-    existingLeadLookupInProgress =
+    existingDealLookupInProgress =
         false;
 
-    existingLeadLookupDoneForCallId =
+    existingDealLookupDoneForCallId =
         '';
 
-    leadCreationInProgress =
+    dealCreationInProgress =
         false;
 
     activityBindingInProgress =
@@ -841,8 +853,8 @@ function resetCallSessionForNewCall(
     crmActivityId =
         0;
 
-    leadId =
-        preservedLeadId;
+    dealId =
+        preservedDealId;
 
     activityRetryCount =
         0;
@@ -942,44 +954,44 @@ function resetCallSessionForNewCall(
     }
 
 
-    const openLeadButton =
+    const openDealButton =
         document.getElementById(
-            'openLeadButton'
+            'openDealButton'
         );
 
 
-    if (openLeadButton) {
+    if (openDealButton) {
 
-        openLeadButton.style.display =
+        openDealButton.style.display =
             'none';
     }
 
 
-    const leadInfo =
+    const dealInfo =
         document.getElementById(
-            'leadInfo'
+            'dealInfo'
         );
 
 
-    if (leadInfo) {
+    if (dealInfo) {
 
-        if (leadId > 0) {
+        if (dealId > 0) {
 
-            leadInfo.className =
+            dealInfo.className =
                 'info ok';
 
-            leadInfo.textContent =
-                'Повторный звонок. Используем связанный лид #' +
-                leadId +
+            dealInfo.textContent =
+                'Повторный звонок. Используем связанную сделку #' +
+                dealId +
                 '.';
 
         } else {
 
-            leadInfo.className =
+            dealInfo.className =
                 'info';
 
-            leadInfo.textContent =
-                'Новый звонок. Определяем связанный лид...';
+            dealInfo.textContent =
+                'Новый звонок. Определяем связанную сделку...';
         }
     }
 
@@ -1088,51 +1100,51 @@ function applyCallStatus(
     }
 
 
-    syncCreateLeadButtonState();
+    syncCreateDealButtonState();
 
 
     /*
-     * Если у звонка уже есть лид —
+     * Если у звонка уже есть сделка —
      * используем его.
      *
-     * Если лида нет — НЕ создаём автоматически.
-     * Показываем менеджеру кнопку "+ Создать лид".
+     * Если сделки нет — НЕ создаём автоматически.
+     * Показываем менеджеру кнопку "+ Создать сделку".
      */
 
-    const existingLeadId =
-        findLeadIdInStatus(
+    const existingDealId =
+        findDealIdInStatus(
             status
         );
 
 
-    if (existingLeadId) {
+    if (existingDealId) {
 
-        setLead(
-            existingLeadId,
+        setDeal(
+            existingDealId,
             false
         );
 
-        existingLeadLookupDoneForCallId =
+        existingDealLookupDoneForCallId =
             callId;
 
-    } else if (!leadId) {
+    } else if (!dealId) {
 
         /*
          * Для повторного звонка CALL_ID уже другой,
-         * поэтому искать лид по CALL_ID нельзя.
-         * Ищем активный лид по номеру телефона.
+         * поэтому искать сделка по CALL_ID нельзя.
+         * Ищем активную сделку по номеру телефона.
          */
-        resolveExistingLeadForCurrentCall();
+        resolveExistingDealForCurrentCall();
     }
 
 
     /*
-     * Если лид уже известен —
+     * Если сделка уже известна —
      * пытаемся привязать к нему
      * CRM-дело звонка.
      */
 
-    if (leadId) {
+    if (dealId) {
 
         ensureCallActivityBinding();
     }
@@ -1146,11 +1158,11 @@ function applyCallStatus(
 
 /*
  * =========================================================
- * ИЩЕМ ЛИД СРЕДИ ПРИВЯЗОК ЗВОНКА
+ * ИЩЕМ СДЕЛКУ СРЕДИ ПРИВЯЗОК ЗВОНКА
  * =========================================================
  */
 
-function findLeadIdInStatus(
+function findDealIdInStatus(
     status
 ) {
 
@@ -1167,7 +1179,7 @@ function findLeadIdInStatus(
 
 
     if (
-        mainType === 'LEAD'
+        mainType === 'DEAL'
         &&
         mainId
     ) {
@@ -1186,7 +1198,7 @@ function findLeadIdInStatus(
         [];
 
 
-    const leadBinding =
+    const dealBinding =
         bindings.find(
             function (binding) {
 
@@ -1195,7 +1207,7 @@ function findLeadIdInStatus(
                         binding.ENTITY_TYPE || ''
                     ).toUpperCase()
                     ===
-                    'LEAD'
+                    'DEAL'
                     &&
                     normalizePositiveId(
                         binding.ENTITY_ID
@@ -1205,10 +1217,10 @@ function findLeadIdInStatus(
         );
 
 
-    return leadBinding
+    return dealBinding
         ?
         normalizePositiveId(
-            leadBinding.ENTITY_ID
+            dealBinding.ENTITY_ID
         )
         :
         0;
@@ -1218,16 +1230,16 @@ function findLeadIdInStatus(
 
 /*
  * =========================================================
- * ИЩЕМ СУЩЕСТВУЮЩИЙ АКТИВНЫЙ ЛИД ПО ТЕЛЕФОНУ
+ * ИЩЕМ СУЩЕСТВУЮЩУЮ АКТИВНУЮ СДЕЛКУ ПО ТЕЛЕФОНУ
  * =========================================================
  */
 
-function resolveExistingLeadForCurrentCall() {
+function resolveExistingDealForCurrentCall() {
 
     if (
-        leadId
+        dealId
         ||
-        existingLeadLookupInProgress
+        existingDealLookupInProgress
         ||
         !callId
     ) {
@@ -1236,51 +1248,51 @@ function resolveExistingLeadForCurrentCall() {
 
 
     if (
-        existingLeadLookupDoneForCallId ===
+        existingDealLookupDoneForCallId ===
         callId
     ) {
 
-        showCreateLeadButton();
+        showCreateDealButton();
         return;
     }
 
 
     if (!isUsablePhone(phoneNumber)) {
 
-        showCreateLeadButton();
+        showCreateDealButton();
         return;
     }
 
 
-    existingLeadLookupInProgress =
+    existingDealLookupInProgress =
         true;
 
-    syncCreateLeadButtonState();
+    syncCreateDealButtonState();
 
     document.getElementById(
-        'leadInfo'
+        'dealInfo'
     ).textContent =
-        'Ищем существующий лид по номеру телефона...';
+        'Ищем существующую сделку по номеру телефона...';
 
 
-    findExistingActiveLeadByPhone(
+    findExistingActiveDealByPhone(
         phoneNumber,
 
         function (
-            foundLeadId
+            foundDealId
         ) {
 
-            existingLeadLookupInProgress =
+            existingDealLookupInProgress =
                 false;
 
-            existingLeadLookupDoneForCallId =
+            existingDealLookupDoneForCallId =
                 callId;
 
 
-            if (foundLeadId) {
+            if (foundDealId) {
 
-                setLead(
-                    foundLeadId,
+                setDeal(
+                    foundDealId,
                     false
                 );
 
@@ -1290,91 +1302,357 @@ function resolveExistingLeadForCurrentCall() {
             }
 
 
-            showCreateLeadButton();
+            showCreateDealButton();
         }
     );
 }
 
 
-function findExistingActiveLeadByPhone(
+function findExistingActiveDealByPhone(
     phone,
     callback
 ) {
 
+    const normalizedPhone =
+        String(
+            phone || ''
+        ).trim();
+
+
+    if (
+        !isUsablePhone(
+            normalizedPhone
+        )
+    ) {
+
+        callback(0);
+        return;
+    }
+
+
+    let finished =
+        false;
+
+
+    const finish =
+        function (
+            id
+        ) {
+
+            if (
+                finished
+            ) {
+                return;
+            }
+
+            finished =
+                true;
+
+            callback(
+                normalizePositiveId(
+                    id
+                )
+            );
+        };
+
+
+    const findDealByFilter =
+        function (
+            filter,
+            next
+        ) {
+
+            BX24.callMethod(
+
+                'crm.deal.list',
+
+                {
+                    order: {
+                        ID:
+                            'DESC'
+                    },
+
+                    filter:
+                        filter,
+
+                    select: [
+                        'ID',
+                        'TITLE',
+                        'STAGE_SEMANTIC_ID'
+                    ]
+                },
+
+                function (
+                    result
+                ) {
+
+                    if (
+                        result.error()
+                    ) {
+
+                        console.warn(
+                            'Не удалось найти сделку:',
+                            result.error(),
+                            result.error_description()
+                        );
+
+                        next();
+                        return;
+                    }
+
+
+                    const deals =
+                        Array.isArray(
+                            result.data()
+                        )
+                        ?
+                        result.data()
+                        :
+                        [];
+
+
+                    const active =
+                        deals.find(
+                            function (
+                                deal
+                            ) {
+
+                                const semantic =
+                                    String(
+                                        deal.STAGE_SEMANTIC_ID
+                                        ||
+                                        ''
+                                    )
+                                    .toUpperCase();
+
+
+                                return (
+                                    !semantic
+                                    ||
+                                    semantic === 'P'
+                                );
+                            }
+                        );
+
+
+                    if (
+                        active
+                        &&
+                        active.ID
+                    ) {
+
+                        finish(
+                            active.ID
+                        );
+
+                        return;
+                    }
+
+
+                    next();
+                }
+            );
+        };
+
+
+    const findByCompanies =
+        function () {
+
+            BX24.callMethod(
+
+                'crm.duplicate.findbycomm',
+
+                {
+                    entity_type:
+                        'COMPANY',
+
+                    type:
+                        'PHONE',
+
+                    values: [
+                        normalizedPhone
+                    ]
+                },
+
+                function (
+                    companyResult
+                ) {
+
+                    if (
+                        companyResult.error()
+                    ) {
+
+                        finish(0);
+                        return;
+                    }
+
+
+                    const data =
+                        companyResult.data()
+                        ||
+                        {};
+
+
+                    const companyIds =
+                        (
+                            Array.isArray(
+                                data.COMPANY
+                            )
+                            ?
+                            data.COMPANY
+                            :
+                            []
+                        )
+                        .map(
+                            normalizePositiveId
+                        )
+                        .filter(
+                            Boolean
+                        );
+
+
+                    const tryCompany =
+                        function (
+                            index
+                        ) {
+
+                            if (
+                                finished
+                            ) {
+                                return;
+                            }
+
+
+                            if (
+                                index >=
+                                companyIds.length
+                            ) {
+
+                                finish(0);
+                                return;
+                            }
+
+
+                            findDealByFilter(
+                                {
+                                    COMPANY_ID:
+                                        companyIds[index]
+                                },
+
+                                function () {
+
+                                    tryCompany(
+                                        index + 1
+                                    );
+                                }
+                            );
+                        };
+
+
+                    tryCompany(0);
+                }
+            );
+        };
+
+
     BX24.callMethod(
+
         'crm.duplicate.findbycomm',
 
         {
             entity_type:
-                'LEAD',
+                'CONTACT',
 
             type:
                 'PHONE',
 
             values: [
-                phone
+                normalizedPhone
             ]
         },
 
         function (
-            result
+            contactResult
         ) {
 
-            if (result.error()) {
+            if (
+                contactResult.error()
+            ) {
 
-                console.warn(
-                    'Не удалось найти лид по телефону:',
-                    result.error(),
-                    result.error_description()
-                );
-
-                callback(0);
+                findByCompanies();
                 return;
             }
 
 
             const data =
-                result.data() || {};
+                contactResult.data()
+                ||
+                {};
 
-            const ids =
+
+            const contactIds =
                 (
                     Array.isArray(
-                        data.LEAD
+                        data.CONTACT
                     )
                     ?
-                    data.LEAD
+                    data.CONTACT
                     :
                     []
                 )
                 .map(
                     normalizePositiveId
                 )
-                .filter(Boolean)
-                .sort(
-                    function (a, b) {
-                        return b - a;
-                    }
+                .filter(
+                    Boolean
                 );
 
 
-            if (!ids.length) {
+            const tryContact =
+                function (
+                    index
+                ) {
 
-                callback(0);
-                return;
-            }
+                    if (
+                        finished
+                    ) {
+                        return;
+                    }
 
 
-            findFirstActiveLeadFromIds(
-                ids,
-                0,
-                callback
-            );
+                    if (
+                        index >=
+                        contactIds.length
+                    ) {
+
+                        findByCompanies();
+                        return;
+                    }
+
+
+                    findDealByFilter(
+                        {
+                            CONTACT_ID:
+                                contactIds[index]
+                        },
+
+                        function () {
+
+                            tryContact(
+                                index + 1
+                            );
+                        }
+                    );
+                };
+
+
+            tryContact(0);
         }
     );
 }
 
 
-function findFirstActiveLeadFromIds(
+function findFirstActiveDealFromIds(
     ids,
     index,
     callback
@@ -1398,7 +1676,7 @@ function findFirstActiveLeadFromIds(
 
     if (!id) {
 
-        findFirstActiveLeadFromIds(
+        findFirstActiveDealFromIds(
             ids,
             index + 1,
             callback
@@ -1409,7 +1687,8 @@ function findFirstActiveLeadFromIds(
 
 
     BX24.callMethod(
-        'crm.lead.get',
+
+        'crm.deal.get',
 
         {
             id:
@@ -1420,21 +1699,25 @@ function findFirstActiveLeadFromIds(
             result
         ) {
 
-            if (!result.error()) {
+            if (
+                !result.error()
+            ) {
 
-                const lead =
-                    result.data() || {};
+                const deal =
+                    result.data()
+                    ||
+                    {};
+
 
                 const semantic =
                     String(
-                        lead.STATUS_SEMANTIC_ID || ''
-                    ).toUpperCase();
+                        deal.STAGE_SEMANTIC_ID
+                        ||
+                        ''
+                    )
+                    .toUpperCase();
 
-                /*
-                 * P = лид в работе.
-                 * Если semantic не пришёл, считаем лид пригодным,
-                 * чтобы не создавать дубль из-за особенностей ответа.
-                 */
+
                 if (
                     !semantic
                     ||
@@ -1447,7 +1730,7 @@ function findFirstActiveLeadFromIds(
             }
 
 
-            findFirstActiveLeadFromIds(
+            findFirstActiveDealFromIds(
                 ids,
                 index + 1,
                 callback
@@ -1459,31 +1742,31 @@ function findFirstActiveLeadFromIds(
 
 /*
  * =========================================================
- * КНОПКА "+ СОЗДАТЬ ЛИД"
+ * КНОПКА "+ СОЗДАТЬ СДЕЛКУ"
  * =========================================================
  */
 
-function showCreateLeadButton() {
+function showCreateDealButton() {
 
     document.getElementById(
-        'leadInfo'
+        'dealInfo'
     ).className =
         'info';
 
 
     document.getElementById(
-        'leadInfo'
+        'dealInfo'
     ).textContent =
         callId
         ?
-        'К звонку новый лид не привязан.'
+        'К звонку новая сделка не привязана.'
         :
         'Ожидаем данные текущего звонка...';
 
 
     var actions =
         document.getElementById(
-            'leadActions'
+            'dealActions'
         );
 
 
@@ -1493,30 +1776,30 @@ function showCreateLeadButton() {
 
 
     document.getElementById(
-        'openLeadButton'
+        'openDealButton'
     ).style.display =
         'none';
 
 
-    syncCreateLeadButtonState();
+    syncCreateDealButtonState();
 }
 
 
-function createLeadManually() {
+function createDealManually() {
 
-    if (existingLeadLookupInProgress) {
+    if (existingDealLookupInProgress) {
 
         showError(
-            'Сначала проверяем, нет ли уже существующего лида.'
+            'Сначала проверяем, нет ли уже существующей сделки.'
         );
 
         return;
     }
 
 
-    if (leadId) {
+    if (dealId) {
 
-        openLead();
+        openDeal();
 
         return;
     }
@@ -1532,7 +1815,7 @@ function createLeadManually() {
 
         startStatusPolling();
 
-        syncCreateLeadButtonState();
+        syncCreateDealButtonState();
 
         return;
     }
@@ -1540,7 +1823,7 @@ function createLeadManually() {
 
     const button =
         document.getElementById(
-            'createLeadButton'
+            'createDealButton'
         );
 
 
@@ -1548,13 +1831,13 @@ function createLeadManually() {
         true;
 
     button.textContent =
-        'Создаём лид...';
+        'Создаём сделку...';
 
 
     document.getElementById(
-        'leadInfo'
+        'dealInfo'
     ).textContent =
-        'Запускаем создание лида...';
+        'Запускаем создание сделки...';
 
 
     /*
@@ -1566,12 +1849,12 @@ function createLeadManually() {
             function () {
 
                 if (
-                    !leadId
+                    !dealId
                     &&
-                    leadCreationInProgress
+                    dealCreationInProgress
                 ) {
 
-                    leadCreationInProgress =
+                    dealCreationInProgress =
                         false;
 
 
@@ -1579,18 +1862,18 @@ function createLeadManually() {
                         false;
 
                     button.textContent =
-                        '+ Создать лид';
+                        '+ Создать сделку';
 
 
                     showError(
-                        'Создание лида зависло. Повторите попытку.'
+                        'Создание сделки зависло. Повторите попытку.'
                     );
 
 
                     document.getElementById(
-                        'leadInfo'
+                        'dealInfo'
                     ).textContent =
-                        'Не удалось завершить создание лида.';
+                        'Не удалось завершить создание сделки.';
                 }
 
             },
@@ -1598,13 +1881,13 @@ function createLeadManually() {
         );
 
 
-    ensureLeadForCall(
+    ensureDealForCall(
         callStatusData
     );
 
 
     /*
-     * Если лид успешно появится —
+     * Если сделка успешно появится —
      * таймер просто ничего не сделает.
      */
 
@@ -1613,9 +1896,9 @@ function createLeadManually() {
             function () {
 
                 if (
-                    leadId
+                    dealId
                     ||
-                    !leadCreationInProgress
+                    !dealCreationInProgress
                 ) {
 
                     clearTimeout(
@@ -1632,11 +1915,11 @@ function createLeadManually() {
         );
 }
 
-function showLeadCreatedActions() {
+function showDealCreatedActions() {
 
     const actions =
         document.getElementById(
-            'leadActions'
+            'dealActions'
         );
 
 
@@ -1647,7 +1930,7 @@ function showLeadCreatedActions() {
 
     const createButton =
         document.getElementById(
-            'createLeadButton'
+            'createDealButton'
         );
 
 
@@ -1660,22 +1943,22 @@ function showLeadCreatedActions() {
 
 
     createButton.textContent =
-        '+ Создать лид';
+        '+ Создать сделку';
 
 
     document.getElementById(
-        'openLeadButton'
+        'openDealButton'
     ).style.display =
         'block';
 }
 
 
-function openLead() {
+function openDeal() {
 
-    if (!leadId) {
+    if (!dealId) {
 
         showError(
-            'Лид ещё не создан.'
+            'Сделка ещё не создана.'
         );
 
         return;
@@ -1683,8 +1966,8 @@ function openLead() {
 
 
     BX24.openPath(
-        '/crm/lead/details/' +
-        leadId +
+        '/crm/deal/details/' +
+        dealId +
         '/'
     );
 }
@@ -1692,18 +1975,18 @@ function openLead() {
 
 /*
  * =========================================================
- * СОЗДАЁМ ЛИД ПО КНОПКЕ, ЕСЛИ ЕГО НЕТ
+ * СОЗДАЁМ СДЕЛКУ ПО КНОПКЕ, ЕСЛИ ЕЁ НЕТ
  * =========================================================
  */
 
-function ensureLeadForCall(
+function ensureDealForCall(
     status
 ) {
 
     if (
-        leadId
+        dealId
         ||
-        leadCreationInProgress
+        dealCreationInProgress
     ) {
         return;
     }
@@ -1714,21 +1997,21 @@ function ensureLeadForCall(
      * внешний идентификатор.
      *
      * Благодаря этому повторная загрузка
-     * виджета не создаст второй лид
+     * виджета не создаст вторую сделку
      * для того же звонка.
      */
 
     if (!callId) {
 
         document.getElementById(
-            'leadInfo'
+            'dealInfo'
         ).textContent =
-            'Ожидаем идентификатор звонка для создания лида...';
+            'Ожидаем идентификатор звонка для создания сделки...';
 
 
         const button =
             document.getElementById(
-                'createLeadButton'
+                'createDealButton'
             );
 
 
@@ -1736,20 +2019,20 @@ function ensureLeadForCall(
             false;
 
         button.textContent =
-            '+ Создать лид';
+            '+ Создать сделку';
 
 
         return;
     }
 
 
-leadCreationInProgress =
+dealCreationInProgress =
     true;
 
 document.getElementById(
-    'leadInfo'
+    'dealInfo'
 ).textContent =
-    'Шаг 1/4: проверяем существующий лид...';
+    'Шаг 1/4: проверяем существующую сделку...';
 
     const originId =
         buildOriginId(
@@ -1758,11 +2041,11 @@ document.getElementById(
 
 
     /*
-     * Сначала ищем наш лид по CALL_ID.
+     * Сначала ищем нашу сделку по CALL_ID.
      */
 
     BX24.callMethod(
-        'crm.lead.list',
+        'crm.deal.list',
 
         {
             order: {
@@ -1773,7 +2056,7 @@ document.getElementById(
             filter: {
 
                 ORIGINATOR_ID:
-                    LEAD_ORIGINATOR_ID,
+                    DEAL_ORIGINATOR_ID,
 
                 ORIGIN_ID:
                     originId
@@ -1790,13 +2073,13 @@ document.getElementById(
             if (result.error()) {
 
                 console.warn(
-                    'Не удалось проверить существующий лид:',
+                    'Не удалось проверить существующую сделку:',
                     result.error(),
                     result.error_description()
                 );
 
 document.getElementById(
-    'leadInfo'
+    'dealInfo'
 ).textContent =
     'Шаг 2/4: определяем клиента и ответственного...';
                 /*
@@ -1804,12 +2087,12 @@ document.getElementById(
                  * продолжаем создание.
                  */
 
-                resolveLeadContext(
+                resolveDealContext(
                     status,
                     function (context) {
                         ensureClientContextByPhone(
                             context,
-                            createLeadFromContext
+                            createDealFromContext
                         );
                     }
                 );
@@ -1818,31 +2101,31 @@ document.getElementById(
             }
 
 
-            const leads =
+            const deals =
                 result.data() || [];
 
 
             if (
-                leads.length > 0
+                deals.length > 0
             ) {
 
                 const foundId =
                     normalizePositiveId(
-                        leads[0].ID
+                        deals[0].ID
                     );
 
 
-                leadCreationInProgress =
+                dealCreationInProgress =
                     false;
 
 
-                setLead(
+                setDeal(
                     foundId,
                     true
                 );
 
 
-                showLeadCreatedActions();
+                showDealCreatedActions();
 
 
                 ensureCallActivityBinding();
@@ -1851,21 +2134,21 @@ document.getElementById(
             }
 
 document.getElementById(
-    'leadInfo'
+    'dealInfo'
 ).textContent =
     'Шаг 2/4: определяем клиента и ответственного...';
             /*
-             * Лида для этого CALL_ID ещё нет.
+             * Сделки для этого CALL_ID ещё нет.
              * Получаем ответственного и
              * существующего клиента.
              */
 
-            resolveLeadContext(
+            resolveDealContext(
                 status,
                 function (context) {
                     ensureClientContextByPhone(
                         context,
-                        createLeadFromContext
+                        createDealFromContext
                     );
                 }
             );
@@ -1880,7 +2163,7 @@ document.getElementById(
  * =========================================================
  */
 
-function resolveLeadContext(
+function resolveDealContext(
     status,
     callback
 ) {
@@ -2551,22 +2834,23 @@ function createContactForCall(
 
 /*
  * =========================================================
- * СОЗДАЁМ ЛИД
+ * СОЗДАЁМ СДЕЛКУ
  * =========================================================
  */
 
-function getLeadStatusIdByName(
+function getDealStatusIdByName(
     stageName,
     callback
 ) {
 
     BX24.callMethod(
+
         'crm.status.list',
 
         {
             filter: {
                 ENTITY_ID:
-                    'STATUS'
+                    getDealStageEntityId()
             },
 
             order: {
@@ -2575,12 +2859,16 @@ function getLeadStatusIdByName(
             }
         },
 
-        function (result) {
+        function (
+            result
+        ) {
 
-            if (result.error()) {
+            if (
+                result.error()
+            ) {
 
                 console.warn(
-                    'Не удалось получить стадии лидов:',
+                    'Не удалось получить стадии сделок:',
                     result.error(),
                     result.error_description()
                 );
@@ -2591,12 +2879,16 @@ function getLeadStatusIdByName(
 
 
             const statuses =
-                result.data() || [];
+                result.data()
+                ||
+                [];
 
 
             const target =
                 statuses.find(
-                    function (status) {
+                    function (
+                        status
+                    ) {
 
                         return (
                             normalizeText(
@@ -2611,7 +2903,9 @@ function getLeadStatusIdByName(
                 );
 
 
-            if (!target) {
+            if (
+                !target
+            ) {
 
                 console.warn(
                     'Не найдена стадия:',
@@ -2625,7 +2919,9 @@ function getLeadStatusIdByName(
 
             callback(
                 String(
-                    target.STATUS_ID || ''
+                    target.STATUS_ID
+                    ||
+                    ''
                 )
             );
         }
@@ -2635,44 +2931,46 @@ function getLeadStatusIdByName(
 
 /*
  * =========================================================
- * СОЗДАЁМ ЛИД
+ * СОЗДАЁМ СДЕЛКУ
  * =========================================================
  */
 
-function createLeadFromContext(context) 
+function createDealFromContext(
+    context
+)
 {
-document.getElementById(
-    'leadInfo'
-).textContent =
-    'Шаг 3/4: определяем стадию «Новый»...';
-    if (leadId) {
 
-        leadCreationInProgress =
+    document
+        .getElementById(
+            'dealInfo'
+        )
+        .textContent =
+        'Шаг 3/4: определяем стадию «Новый»...';
+
+
+    if (
+        dealId
+    ) {
+
+        dealCreationInProgress =
             false;
 
         return;
     }
 
 
-    /*
-     * ВАЖНО:
-     * на этом портале STATUS_ID = NEW
-     * НЕ является стадией с названием "Новый".
-     *
-     * Поэтому сначала находим реальный STATUS_ID
-     * стадии по её названию.
-     */
-
-    getLeadStatusIdByName(
+    getDealStatusIdByName(
         'Новый',
 
         function (
-            realNewStatusId
+            realNewStageId
         ) {
 
-            if (!realNewStatusId) {
+            if (
+                !realNewStageId
+            ) {
 
-                leadCreationInProgress =
+                dealCreationInProgress =
                     false;
 
 
@@ -2682,16 +2980,17 @@ document.getElementById(
 
 
                 const button =
-                    document.getElementById(
-                        'createLeadButton'
-                    );
+                    document
+                        .getElementById(
+                            'createDealButton'
+                        );
 
 
                 button.disabled =
                     false;
 
                 button.textContent =
-                    '+ Создать лид';
+                    '+ Создать сделку';
 
 
                 return;
@@ -2699,37 +2998,32 @@ document.getElementById(
 
 
             console.log(
-                'Реальный STATUS_ID стадии "Новый":',
-                realNewStatusId
+                'Реальный STAGE_ID стадии "Новый":',
+                realNewStageId
             );
 
 
             const fields = {
 
                 TITLE:
-                    buildLeadTitle(
+                    buildDealTitle(
                         context
                     ),
 
-                /*
-                 * Не используем строку NEW.
-                 * Берём ID именно стадии,
-                 * которая называется "Новый".
-                 */
-                STATUS_ID:
-                    realNewStatusId,
+                CATEGORY_ID:
+                    DEAL_CATEGORY_ID,
+
+                STAGE_ID:
+                    realNewStageId,
 
                 SOURCE_ID:
                     'CALL',
-
-                SOURCE_DESCRIPTION:
-                    'Создан менеджером из карточки звонка через приложение. Клиент привязан из карточки звонка.',
 
                 OPENED:
                     'Y',
 
                 ORIGINATOR_ID:
-                    LEAD_ORIGINATOR_ID,
+                    DEAL_ORIGINATOR_ID,
 
                 ORIGIN_ID:
                     buildOriginId(
@@ -2751,11 +3045,10 @@ document.getElementById(
                 context.contactId
             ) {
 
-                fields.CONTACT_IDS = [
+                fields.CONTACT_ID =
                     Number(
                         context.contactId
-                    )
-                ];
+                    );
             }
 
 
@@ -2770,33 +3063,17 @@ document.getElementById(
             }
 
 
-            if (
-                isUsablePhone(
-                    phoneNumber
+            document
+                .getElementById(
+                    'dealInfo'
                 )
-            ) {
+                .textContent =
+                'Шаг 4/4: создаём сделку в CRM...';
 
-                fields.PHONE = [
-                    {
-                        VALUE:
-                            phoneNumber,
-
-                        VALUE_TYPE:
-                            'WORK'
-                    }
-                ];
-            }
-
-
-           
-
-document.getElementById(
-    'leadInfo'
-).textContent =
-    'Шаг 4/4: создаём лид в CRM...';
 
             BX24.callMethod(
-                'crm.lead.add',
+
+                'crm.deal.add',
 
                 {
                     fields:
@@ -2809,85 +3086,96 @@ document.getElementById(
                     }
                 },
 
-                function (result) {
+                function (
+                    result
+                ) {
 
-                    leadCreationInProgress =
+                    dealCreationInProgress =
                         false;
 
 
-                    if (result.error()) {
+                    if (
+                        result.error()
+                    ) {
 
                         showError(
-                            'Не удалось создать лид: ' +
+                            'Не удалось создать сделку: '
+                            +
                             result.error_description()
                         );
 
 
-                        document.getElementById(
-                            'leadInfo'
-                        ).textContent =
-                            'Лид не создан.';
+                        document
+                            .getElementById(
+                                'dealInfo'
+                            )
+                            .textContent =
+                            'Сделка не создана.';
 
 
                         const button =
-                            document.getElementById(
-                                'createLeadButton'
-                            );
+                            document
+                                .getElementById(
+                                    'createDealButton'
+                                );
 
 
                         button.disabled =
                             false;
 
                         button.textContent =
-                            '+ Создать лид';
+                            '+ Создать сделку';
 
 
                         return;
                     }
 
 
-                    const newLeadId =
+                    const newDealId =
                         normalizePositiveId(
                             result.data()
                         );
 
 
-                    if (!newLeadId) {
+                    if (
+                        !newDealId
+                    ) {
 
                         showError(
-                            'Битрикс24 не вернул ID созданного лида.'
+                            'Битрикс24 не вернул ID созданной сделки.'
                         );
 
                         return;
                     }
 
 
-                    bindClientToLead(
-                        newLeadId,
+                    bindClientToDeal(
+                        newDealId,
                         context,
 
                         function () {
 
-                            ensureLeadStageNew(
-                                newLeadId,
+                            ensureDealStageNew(
+                                newDealId,
 
                                 function () {
 
-                                    setLead(
-                                        newLeadId,
+                                    setDeal(
+                                        newDealId,
                                         true
                                     );
 
 
                                     showSuccess(
-                                        'Лид #' +
-                                        newLeadId +
-                                        ' создан. Клиент привязан. Стадия: «Новый».'
+                                        'Сделка #'
+                                        +
+                                        newDealId
+                                        +
+                                        ' создана. Клиент привязан. Стадия: «Новый».'
                                     );
 
 
-                                    showLeadCreatedActions();
-
+                                    showDealCreatedActions();
 
                                     ensureCallActivityBinding();
                                 }
@@ -2903,72 +3191,82 @@ document.getElementById(
 
 /*
  * =========================================================
- * ЯВНО ПРИВЯЗЫВАЕМ КЛИЕНТА К ЛИДУ
+ * ЯВНО ПРИВЯЗЫВАЕМ КЛИЕНТА К СДЕЛКЕ
  * =========================================================
  */
 
-function bindClientToLead(
-    newLeadId,
+function bindClientToDeal(
+    newDealId,
     context,
     callback
 ) {
 
-    const finish = function () {
+    const fields =
+        {};
 
-        if (context.companyId) {
-            BX24.callMethod(
-                'crm.lead.update',
-                {
-                    id: newLeadId,
-                    fields: {
-                        COMPANY_ID:
-                            Number(context.companyId)
-                    }
-                },
-                function () {
-                    callback();
-                }
+
+    if (
+        context.contactId
+    ) {
+
+        fields.CONTACT_ID =
+            Number(
+                context.contactId
             );
+    }
 
-            return;
-        }
+
+    if (
+        context.companyId
+    ) {
+
+        fields.COMPANY_ID =
+            Number(
+                context.companyId
+            );
+    }
+
+
+    if (
+        Object.keys(
+            fields
+        ).length === 0
+    ) {
 
         callback();
-    };
-
-
-    if (!context.contactId) {
-        finish();
         return;
     }
 
 
     BX24.callMethod(
-        'crm.lead.contact.add',
+
+        'crm.deal.update',
+
         {
-            id: newLeadId,
-            fields: {
-                CONTACT_ID:
-                    Number(context.contactId),
+            id:
+                newDealId,
 
-                SORT:
-                    10,
-
-                IS_PRIMARY:
-                    'Y'
-            }
+            fields:
+                fields
         },
-        function (result) {
 
-            if (result.error()) {
+        function (
+            result
+        ) {
+
+            if (
+                result.error()
+            ) {
+
                 console.warn(
-                    'crm.lead.contact.add:',
+                    'Не удалось привязать клиента к сделке:',
                     result.error(),
                     result.error_description()
                 );
             }
 
-            finish();
+
+            callback();
         }
     );
 }
@@ -2980,22 +3278,24 @@ function bindClientToLead(
  * =========================================================
  */
 
-function ensureLeadStageNew(
-    newLeadId,
+function ensureDealStageNew(
+    newDealId,
     callback
 ) {
 
-    getLeadStatusIdByName(
+    getDealStatusIdByName(
         'Новый',
 
         function (
-            realNewStatusId
+            realNewStageId
         ) {
 
-            if (!realNewStatusId) {
+            if (
+                !realNewStageId
+            ) {
 
                 console.warn(
-                    'Не удалось найти реальный STATUS_ID стадии "Новый"'
+                    'Не удалось найти реальный STAGE_ID стадии "Новый"'
                 );
 
                 callback();
@@ -3004,19 +3304,24 @@ function ensureLeadStageNew(
 
 
             BX24.callMethod(
-                'crm.lead.get',
+
+                'crm.deal.get',
 
                 {
                     id:
-                        newLeadId
+                        newDealId
                 },
 
-                function (getResult) {
+                function (
+                    getResult
+                ) {
 
-                    if (getResult.error()) {
+                    if (
+                        getResult.error()
+                    ) {
 
                         console.warn(
-                            'Не удалось проверить стадию лида:',
+                            'Не удалось проверить стадию сделки:',
                             getResult.error(),
                             getResult.error_description()
                         );
@@ -3026,27 +3331,31 @@ function ensureLeadStageNew(
                     }
 
 
-                    const leadData =
-                        getResult.data() || {};
+                    const dealData =
+                        getResult.data()
+                        ||
+                        {};
 
 
-                    const currentStatusId =
+                    const currentStageId =
                         String(
-                            leadData.STATUS_ID || ''
+                            dealData.STAGE_ID
+                            ||
+                            ''
                         );
 
 
                     console.log(
-                        'Стадия лида после создания:',
-                        currentStatusId,
+                        'Стадия сделки после создания:',
+                        currentStageId,
                         'ожидается:',
-                        realNewStatusId
+                        realNewStageId
                     );
 
 
                     if (
-                        currentStatusId ===
-                        realNewStatusId
+                        currentStageId ===
+                        realNewStageId
                     ) {
 
                         callback();
@@ -3054,31 +3363,31 @@ function ensureLeadStageNew(
                     }
 
 
-                    /*
-                     * Если другой механизм успел
-                     * поменять стадию, возвращаем
-                     * именно в реальную стадию "Новый".
-                     */
-
                     BX24.callMethod(
-                        'crm.lead.update',
+
+                        'crm.deal.update',
 
                         {
                             id:
-                                newLeadId,
+                                newDealId,
 
                             fields: {
-                                STATUS_ID:
-                                    realNewStatusId
+
+                                STAGE_ID:
+                                    realNewStageId
                             }
                         },
 
-                        function (updateResult) {
+                        function (
+                            updateResult
+                        ) {
 
-                            if (updateResult.error()) {
+                            if (
+                                updateResult.error()
+                            ) {
 
                                 console.warn(
-                                    'Не удалось вернуть лид в "Новый":',
+                                    'Не удалось вернуть сделку в "Новый":',
                                     updateResult.error(),
                                     updateResult.error_description()
                                 );
@@ -3086,8 +3395,8 @@ function ensureLeadStageNew(
                             } else {
 
                                 console.log(
-                                    'Лид возвращён в реальную стадию "Новый":',
-                                    realNewStatusId
+                                    'Сделка возвращена в реальную стадию "Новый":',
+                                    realNewStageId
                                 );
                             }
 
@@ -3104,11 +3413,11 @@ function ensureLeadStageNew(
 
 /*
  * =========================================================
- * УСТАНАВЛИВАЕМ ТЕКУЩИЙ ЛИД
+ * УСТАНАВЛИВАЕМ ТЕКУЩУЮ СДЕЛКУ
  * =========================================================
  */
 
-function setLead(
+function setDeal(
     id,
     createdByApp
 ) {
@@ -3125,36 +3434,36 @@ function setLead(
 
 
     const changed =
-        leadId !== id;
+        dealId !== id;
 
 
-    leadId =
+    dealId =
         id;
 
 
-    syncCreateLeadButtonState();
+    syncCreateDealButtonState();
 
-    showLeadCreatedActions();
+    showDealCreatedActions();
 
 
     document.getElementById(
-        'leadInfo'
+        'dealInfo'
     ).className =
         'info ok';
 
 
     document.getElementById(
-        'leadInfo'
+        'dealInfo'
     ).textContent =
         (
             createdByApp
             ?
-            'Лид для звонка: #'
+            'Сделка для звонка: #'
             :
-            'Связанный лид: #'
+            'Связанная сделка: #'
         )
         +
-        leadId;
+        dealId;
 
 
     if (
@@ -3163,7 +3472,7 @@ function setLead(
         !callResultFieldCode
     ) {
 
-        loadLeadInfo();
+        loadDealInfo();
 
         loadCallResultField();
     }
@@ -3177,23 +3486,23 @@ function setLead(
 
 /*
  * =========================================================
- * ИНФОРМАЦИЯ О ЛИДЕ
+ * ИНФОРМАЦИЯ О СДЕЛКЕ
  * =========================================================
  */
 
-function loadLeadInfo() {
+function loadDealInfo() {
 
-    if (!leadId) {
+    if (!dealId) {
         return;
     }
 
 
     BX24.callMethod(
-        'crm.lead.get',
+        'crm.deal.get',
 
         {
             id:
-                leadId
+                dealId
         },
 
         function (result) {
@@ -3203,25 +3512,25 @@ function loadLeadInfo() {
             }
 
 
-            const lead =
+            const deal =
                 result.data() || {};
 
 
             const title =
-                lead.TITLE
+                deal.TITLE
                 ?
-                lead.TITLE
+                deal.TITLE
                 :
-                'Лид #' + leadId;
+                'Сделка #' + dealId;
 
 
             document.getElementById(
-                'leadInfo'
+                'dealInfo'
             ).textContent =
-                'Лид: ' +
+                'Сделка: ' +
                 title +
                 ' (#' +
-                leadId +
+                dealId +
                 ')';
         }
     );
@@ -3230,14 +3539,14 @@ function loadLeadInfo() {
 
 /*
  * =========================================================
- * ПРИВЯЗЫВАЕМ CRM-ДЕЛО ЗВОНКА К ЛИДУ
+ * ПРИВЯЗЫВАЕМ CRM-ДЕЛО ЗВОНКА К СДЕЛКЕ
  * =========================================================
  */
 
 function ensureCallActivityBinding() {
 
     if (
-        !leadId
+        !dealId
         ||
         activityBindingInProgress
     ) {
@@ -3251,7 +3560,7 @@ function ensureCallActivityBinding() {
      */
 
     if (
-        statusAlreadyContainsLeadBinding()
+        statusAlreadyContainsDealBinding()
     ) {
 
         showBindingSuccess();
@@ -3270,7 +3579,7 @@ function ensureCallActivityBinding() {
         document.getElementById(
             'bindingInfo'
         ).textContent =
-            'Лид создан. Ожидаем CRM-дело звонка для привязки...';
+            'Сделка создана. Ожидаем CRM-дело звонка для привязки...';
 
 
         scheduleActivityBindingRetry();
@@ -3286,8 +3595,8 @@ function ensureCallActivityBinding() {
     document.getElementById(
         'bindingInfo'
     ).textContent =
-        'Привязываем звонок к лиду #' +
-        leadId +
+        'Привязываем звонок к сделке #' +
+        dealId +
         '...';
 
 
@@ -3299,13 +3608,13 @@ function ensureCallActivityBinding() {
                 crmActivityId,
 
             /*
-             * entityTypeId = 1 — лид.
+             * entityTypeId = 2 — сделка.
              */
             entityTypeId:
-                1,
+                2,
 
             entityId:
-                leadId
+                dealId
         },
 
         function (result) {
@@ -3343,7 +3652,7 @@ function ensureCallActivityBinding() {
                 document.getElementById(
                     'bindingInfo'
                 ).textContent =
-                    'Лид создан, но пока не удалось привязать дело звонка. Повторяем...';
+                    'Сделка создана, но пока не удалось привязать дело звонка. Повторяем...';
 
 
                 scheduleActivityBindingRetry();
@@ -3369,7 +3678,7 @@ function ensureCallActivityBinding() {
 }
 
 
-function statusAlreadyContainsLeadBinding() {
+function statusAlreadyContainsDealBinding() {
 
     const bindings =
         Array.isArray(
@@ -3389,13 +3698,13 @@ function statusAlreadyContainsLeadBinding() {
                     binding.ENTITY_TYPE || ''
                 ).toUpperCase()
                 ===
-                'LEAD'
+                'DEAL'
                 &&
                 normalizePositiveId(
                     binding.ENTITY_ID
                 )
                 ===
-                leadId
+                dealId
             );
         }
     );
@@ -3424,8 +3733,8 @@ function showBindingSuccess() {
     document.getElementById(
         'bindingInfo'
     ).textContent =
-        'Звонок привязан к лиду #' +
-        leadId +
+        'Звонок привязан к сделке #' +
+        dealId +
         '.';
 }
 
@@ -3499,7 +3808,7 @@ function handleCallState(
             'call-status';
 
         statusElement.textContent =
-            'Разговор идёт. Лид уже создаётся/проверяется. После завершения выберите результат.';
+            'Разговор идёт. Сделка уже создаётся или проверяется. После завершения выберите результат.';
 
         return;
     }
@@ -3714,7 +4023,7 @@ function findCallResultField(
 ) {
 
     BX24.callMethod(
-        'crm.lead.userfield.list',
+        'crm.deal.userfield.list',
 
         {
             order: {
@@ -3744,7 +4053,7 @@ function findCallResultField(
             if (result.error()) {
 
                 showError(
-                    'Не удалось получить пользовательские поля лида: ' +
+                    'Не удалось получить пользовательские поля сделки: ' +
                     result.error_description()
                 );
 
@@ -3918,7 +4227,7 @@ function loadCallResultFieldById() {
 
 
     BX24.callMethod(
-        'crm.lead.userfield.get',
+        'crm.deal.userfield.get',
 
         {
             id:
@@ -3963,14 +4272,14 @@ function loadCallResultFieldById() {
 
 /*
  * =========================================================
- * РЕЗЕРВНО ПОЛУЧАЕМ ENUM ИЗ crm.lead.fields
+ * РЕЗЕРВНО ПОЛУЧАЕМ ENUM ИЗ crm.deal.fields
  * =========================================================
  */
 
 function loadCallResultOptionsFallback() {
 
     BX24.callMethod(
-        'crm.lead.fields',
+        'crm.deal.fields',
         {},
 
         function (result) {
@@ -4611,10 +4920,10 @@ async function replaceStandardCallWithCustomCard(
     callComment = ''
 ) {
 
-    if (!leadId) {
+    if (!dealId) {
 
         throw new Error(
-            'Не определён лид.'
+            'Не определена сделка.'
         );
     }
 
@@ -4698,12 +5007,12 @@ async function replaceStandardCallWithCustomCard(
         ).trim();
 
 
-    const lead =
+    const deal =
         await bxCallPromise(
-            'crm.lead.get',
+            'crm.deal.get',
             {
                 id:
-                    leadId
+                    dealId
             }
         );
 
@@ -4780,8 +5089,8 @@ async function replaceStandardCallWithCustomCard(
 
     const clientTitle =
         String(
-            lead.TITLE ||
-            ('Лид #' + leadId)
+            deal.TITLE ||
+            ('Сделка #' + dealId)
         );
 
 
@@ -4826,7 +5135,7 @@ async function replaceStandardCallWithCustomCard(
     const responsibleId =
         normalizePositiveId(
             activity.RESPONSIBLE_ID ||
-            lead.ASSIGNED_BY_ID
+            deal.ASSIGNED_BY_ID
         );
 
 
@@ -4902,8 +5211,8 @@ async function replaceStandardCallWithCustomCard(
                                 'redirect',
 
                             uri:
-                                '/crm/lead/details/' +
-                                leadId +
+                                '/crm/deal/details/' +
+                                dealId +
                                 '/'
                         }
                     }
@@ -4980,10 +5289,10 @@ async function replaceStandardCallWithCustomCard(
             'crm.activity.configurable.add',
             {
                 ownerTypeId:
-                    1,
+                    2,
 
                 ownerId:
-                    leadId,
+                    dealId,
 
                 fields:
                     fields,
@@ -5035,13 +5344,13 @@ async function replaceStandardCallWithCustomCard(
                                             'create_testdrive',
 
                                         ID:
-                                            leadId,
+                                            dealId,
 
-                                        leadId:
-                                            leadId,
+                                        dealId:
+                                            dealId,
 
                                         entityId:
-                                            leadId
+                                            dealId
                                     },
 
                                     sliderParams: {
@@ -5074,13 +5383,13 @@ async function replaceStandardCallWithCustomCard(
                                             'create_commercial',
 
                                         ID:
-                                            leadId,
+                                            dealId,
 
-                                        leadId:
-                                            leadId,
+                                        dealId:
+                                            dealId,
 
                                         entityId:
-                                            leadId
+                                            dealId
                                     },
 
                                     sliderParams: {
@@ -5171,7 +5480,7 @@ async function replaceStandardCallWithCustomCard(
 
 /*
  * =========================================================
- * СОХРАНЯЕМ РЕЗУЛЬТАТ В СОЗДАННЫЙ ЛИД
+ * СОХРАНЯЕМ РЕЗУЛЬТАТ В СОЗДАННУЮ СДЕЛКУ
  * =========================================================
  */
 
@@ -5190,10 +5499,10 @@ function saveCallResult() {
     }
 
 
-    if (!leadId) {
+    if (!dealId) {
 
         showError(
-            'Лид ещё не создан. Подождите несколько секунд.'
+            'Сделка ещё не создана. Подождите несколько секунд.'
         );
 
         refreshCallStatus();
@@ -5279,11 +5588,11 @@ function saveCallResult() {
 
 
     BX24.callMethod(
-        'crm.lead.update',
+        'crm.deal.update',
 
         {
             id:
-                leadId,
+                dealId,
 
             fields:
                 fields
@@ -5309,14 +5618,14 @@ function saveCallResult() {
 
             /*
              * После сохранения результата
-             * ставим правильную стадию лида.
+             * ставим правильную стадию сделки.
              *
              * Это заодно перекрывает ситуацию,
              * когда Битрикс сам успел увести
-             * новый лид в "Отказ от покупки".
+             * новую сделку в "Отказ от покупки".
              */
 
-            setLeadStageByCallResult(
+            setDealStageByCallResult(
                 selectedText,
 
                 function (
@@ -5351,8 +5660,8 @@ function saveCallResult() {
 
 
                     let successText =
-                        'Результат сохранён в лид #' +
-                        leadId +
+                        'Результат сохранён в сделке #' +
+                        dealId +
                         ': ' +
                         selectedText;
 
@@ -5427,7 +5736,7 @@ function saveCallResult() {
 
 /*
  * =========================================================
- * СТАДИЯ ЛИДА ПО РЕЗУЛЬТАТУ ЗВОНКА
+ * СТАДИЯ СДЕЛКИ ПО РЕЗУЛЬТАТУ ЗВОНКА
  * =========================================================
  *
  * Логика:
@@ -5443,7 +5752,7 @@ function saveCallResult() {
  * обычный "Дозвонился".
  */
 
-function setLeadStageByCallResult(
+function setDealStageByCallResult(
     resultText,
     callback
 ) {
@@ -5535,7 +5844,7 @@ function setLeadStageByCallResult(
         {
             filter: {
                 ENTITY_ID:
-                    'STATUS'
+                    getDealStageEntityId()
             }
         },
 
@@ -5544,7 +5853,7 @@ function setLeadStageByCallResult(
             if (result.error()) {
 
                 console.warn(
-                    'Не удалось получить стадии лидов:',
+                    'Не удалось получить стадии сделок:',
                     result.error(),
                     result.error_description()
                 );
@@ -5618,7 +5927,7 @@ function setLeadStageByCallResult(
             }
 
 
-            updateLeadStageAndVerify(
+            updateDealStageAndVerify(
                 statusId,
                 targetStageName,
                 callback
@@ -5634,21 +5943,21 @@ function setLeadStageByCallResult(
  * =========================================================
  */
 
-function updateLeadStageAndVerify(
+function updateDealStageAndVerify(
     statusId,
     stageName,
     callback
 ) {
 
     BX24.callMethod(
-        'crm.lead.update',
+        'crm.deal.update',
 
         {
             id:
-                leadId,
+                dealId,
 
             fields: {
-                STATUS_ID:
+                STAGE_ID:
                     statusId
             }
         },
@@ -5678,7 +5987,7 @@ function updateLeadStageAndVerify(
             /*
              * Через небольшую паузу проверяем:
              * если внешний механизм Битрикса
-             * снова перекинул лид в "Отказ",
+             * снова перекинул сделку в "Отказ",
              * возвращаем нужную стадию ещё раз.
              */
 
@@ -5686,11 +5995,11 @@ function updateLeadStageAndVerify(
                 function () {
 
                     BX24.callMethod(
-                        'crm.lead.get',
+                        'crm.deal.get',
 
                         {
                             id:
-                                leadId
+                                dealId
                         },
 
                         function (getResult) {
@@ -5706,13 +6015,13 @@ function updateLeadStageAndVerify(
                             }
 
 
-                            const leadData =
+                            const dealData =
                                 getResult.data() || {};
 
 
                             const currentStatusId =
                                 String(
-                                    leadData.STATUS_ID || ''
+                                    dealData.STAGE_ID || ''
                                 );
 
 
@@ -5745,14 +6054,14 @@ function updateLeadStageAndVerify(
                              */
 
                             BX24.callMethod(
-                                'crm.lead.update',
+                                'crm.deal.update',
 
                                 {
                                     id:
-                                        leadId,
+                                        dealId,
 
                                     fields: {
-                                        STATUS_ID:
+                                        STAGE_ID:
                                             statusId
                                     }
                                 },
@@ -5845,7 +6154,7 @@ function syncResultSelectState() {
             &&
             currentCallState === 'idle'
             &&
-            leadId > 0
+            dealId > 0
             &&
             !resultSaved
         );
@@ -5871,7 +6180,7 @@ function updateSaveAvailability() {
             currentCallState ===
                 'idle'
             &&
-            leadId > 0
+            dealId > 0
             &&
             callResultFieldCode
             &&
@@ -5888,7 +6197,7 @@ function updateSaveAvailability() {
  * =========================================================
  */
 
-function buildLeadTitle(
+function buildDealTitle(
     context
 ) {
 
@@ -5920,7 +6229,7 @@ function buildLeadTitle(
     }
 
 
-    return 'Звонок — новый лид';
+    return 'Звонок — новая сделка';
 }
 
 
