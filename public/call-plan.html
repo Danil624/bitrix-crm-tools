@@ -1,9 +1,9 @@
-
 <!doctype html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <title>Запланировать звонок</title>
+
     <script src="https://api.bitrix24.com/api/v1/"></script>
 
     <style>
@@ -148,21 +148,15 @@
 
 <div class="card">
 
-    <h1>
-        Запланировать исходящий звонок
-    </h1>
+    <h1>Запланировать исходящий звонок</h1>
 
-    <div
-        class="client"
-        id="clientInfo"
-    >
-        Определяем лид...
+    <div class="client" id="clientInfo">
+        Определяем CRM-элемент...
     </div>
 
     <div class="row">
 
         <div class="group col">
-
             <label for="startAt">
                 Дата и время звонка
             </label>
@@ -171,25 +165,19 @@
                 id="startAt"
                 type="datetime-local"
             >
-
         </div>
 
         <div class="group col">
-
             <label for="duration">
                 Длительность
             </label>
 
             <select id="duration">
-
                 <option value="15">
                     15 минут
                 </option>
 
-                <option
-                    value="30"
-                    selected
-                >
+                <option value="30" selected>
                     30 минут
                 </option>
 
@@ -204,15 +192,12 @@
                 <option value="120">
                     2 часа
                 </option>
-
             </select>
-
         </div>
 
     </div>
 
     <div class="group">
-
         <label for="subject">
             О чём разговор
         </label>
@@ -222,11 +207,9 @@
             type="text"
             placeholder="Например: обсудить комплектацию и условия покупки"
         >
-
     </div>
 
     <div class="group">
-
         <label for="description">
             Описание
         </label>
@@ -235,17 +218,14 @@
             id="description"
             placeholder="Что нужно обсудить, уточнить или подготовить к звонку"
         ></textarea>
-
     </div>
 
     <div class="group">
-
         <label for="reminder">
             Напоминание
         </label>
 
         <select id="reminder">
-
             <option value="0">
                 Без напоминания
             </option>
@@ -254,10 +234,7 @@
                 За 5 минут
             </option>
 
-            <option
-                value="15"
-                selected
-            >
+            <option value="15" selected>
                 За 15 минут
             </option>
 
@@ -268,9 +245,7 @@
             <option value="60">
                 За 1 час
             </option>
-
         </select>
-
     </div>
 
     <div class="actions">
@@ -301,99 +276,232 @@
 
 <script>
 
-let leadId =
-    0;
+let entityId = 0;
+let entityType = '';
+let ownerTypeId = 0;
 
-let leadData =
-    null;
+let entityData = null;
 
-let contactId =
-    0;
+let contactId = 0;
+let companyId = 0;
 
-let phone =
-    '';
-
-
-BX24.init(
-    function () {
-
-        try {
-
-            BX24.resizeWindow(
-                760,
-                690
-            );
-
-        } catch (e) {
-        }
-
-
-        const info =
-            BX24.placement.info()
-            ||
-            {};
-
-        const options =
-            info.options
-            ||
-            {};
-
-
-        leadId =
-            findLeadId(
-                options
-            );
-
-
-        if (!leadId) {
-
-            showError(
-                'Не удалось определить текущий лид.'
-            );
-
-            document
-                .getElementById(
-                    'saveButton'
-                )
-                .disabled =
-                true;
-
-            return;
-        }
-
-
-        setDefaultDateTime();
-
-        loadLead();
-    }
-);
+let phone = '';
+let communicationEntityId = 0;
+let communicationEntityTypeId = 0;
 
 
 /*
  * ========================================
- * ИЩЕМ ID ЛИДА
+ * INIT
  * ========================================
  */
 
-function findLeadId(
-    obj
-) {
+BX24.init(function () {
+
+    try {
+        BX24.resizeWindow(
+            760,
+            690
+        );
+    } catch (e) {
+    }
+
+    const info =
+        BX24.placement.info()
+        || {};
+
+    let options =
+        info.options
+        || {};
+
+    /*
+     * Иногда Bitrix может отдать options строкой.
+     */
+    if (typeof options === 'string') {
+        try {
+            options = JSON.parse(options);
+        } catch (e) {
+            options = {};
+        }
+    }
+
+    const placement =
+        String(
+            info.placement
+            || ''
+        ).toUpperCase();
+
+
+    /*
+     * Определяем тип сущности.
+     */
+
+    if (
+        placement.indexOf('CRM_DEAL') !== -1
+    ) {
+
+        entityType = 'DEAL';
+        ownerTypeId = 2;
+
+    } else if (
+        placement.indexOf('CRM_LEAD') !== -1
+    ) {
+
+        entityType = 'LEAD';
+        ownerTypeId = 1;
+
+    } else {
+
+        entityType =
+            detectEntityType(options);
+    }
+
+
+    if (entityType === 'DEAL') {
+        ownerTypeId = 2;
+    }
+
+    if (entityType === 'LEAD') {
+        ownerTypeId = 1;
+    }
+
+
+    entityId =
+        findEntityId(
+            options
+        );
+
+
+    if (
+        !entityId
+        ||
+        !ownerTypeId
+    ) {
+
+        showError(
+            'Не удалось определить текущую сделку.'
+        );
+
+        document
+            .getElementById('saveButton')
+            .disabled = true;
+
+        return;
+    }
+
+
+    setDefaultDateTime();
+
+    loadEntity();
+});
+
+
+/*
+ * ========================================
+ * ТИП CRM-СУЩНОСТИ
+ * ========================================
+ */
+
+function detectEntityType(obj) {
 
     if (
         !obj
         ||
-        typeof obj !==
-        'object'
+        typeof obj !== 'object'
     ) {
+        return '';
+    }
 
+
+    const typeId =
+        Number(
+            obj.ENTITY_TYPE_ID
+            ||
+            obj.entityTypeId
+            ||
+            obj.OWNER_TYPE_ID
+            ||
+            obj.ownerTypeId
+            ||
+            0
+        );
+
+
+    if (typeId === 2) {
+        return 'DEAL';
+    }
+
+    if (typeId === 1) {
+        return 'LEAD';
+    }
+
+
+    if (
+        obj.DEAL_ID
+        ||
+        obj.dealId
+    ) {
+        return 'DEAL';
+    }
+
+
+    if (
+        obj.LEAD_ID
+        ||
+        obj.leadId
+    ) {
+        return 'LEAD';
+    }
+
+
+    for (const key in obj) {
+
+        if (
+            obj[key]
+            &&
+            typeof obj[key] === 'object'
+        ) {
+
+            const result =
+                detectEntityType(
+                    obj[key]
+                );
+
+            if (result) {
+                return result;
+            }
+        }
+    }
+
+
+    return '';
+}
+
+
+/*
+ * ========================================
+ * ИЩЕМ ID CRM-ЭЛЕМЕНТА
+ * ========================================
+ */
+
+function findEntityId(obj) {
+
+    if (
+        !obj
+        ||
+        typeof obj !== 'object'
+    ) {
         return 0;
     }
 
 
     const directKeys = [
 
-        'ID',
-        'id',
+        'DEAL_ID',
+        'dealId',
+
+        'LEAD_ID',
+        'leadId',
 
         'ENTITY_ID',
         'entityId',
@@ -401,29 +509,23 @@ function findLeadId(
         'OWNER_ID',
         'ownerId',
 
-        'LEAD_ID',
-        'leadId'
+        'ID',
+        'id'
 
     ];
 
 
-    for (
-        const key
-        of directKeys
-    ) {
+    for (const key of directKeys) {
 
         const value =
             Number(
                 obj[key]
-                ||
-                0
+                || 0
             );
 
 
         if (
-            Number.isFinite(
-                value
-            )
+            Number.isFinite(value)
             &&
             value > 0
         ) {
@@ -435,27 +537,21 @@ function findLeadId(
     }
 
 
-    for (
-        const key
-        in obj
-    ) {
+    for (const key in obj) {
 
         if (
             obj[key]
             &&
-            typeof obj[key]
-            ===
-            'object'
+            typeof obj[key] === 'object'
         ) {
 
             const found =
-                findLeadId(
+                findEntityId(
                     obj[key]
                 );
 
 
             if (found) {
-
                 return found;
             }
         }
@@ -492,21 +588,17 @@ function setDefaultDateTime() {
         new Date(
             d.getTime()
             -
-            d.getTimezoneOffset()
-            *
-            60000
+            d.getTimezoneOffset() * 60000
         )
-        .toISOString()
-        .slice(
-            0,
-            16
-        );
+            .toISOString()
+            .slice(
+                0,
+                16
+            );
 
 
     document
-        .getElementById(
-            'startAt'
-        )
+        .getElementById('startAt')
         .value =
         local;
 }
@@ -514,31 +606,43 @@ function setDefaultDateTime() {
 
 /*
  * ========================================
- * ЗАГРУЖАЕМ ЛИД
+ * ЗАГРУЖАЕМ CRM-ЭЛЕМЕНТ
  * ========================================
  */
 
-function loadLead() {
+function loadEntity() {
+
+    const method =
+        entityType === 'DEAL'
+            ? 'crm.deal.get'
+            : 'crm.lead.get';
+
 
     BX24.callMethod(
 
-        'crm.lead.get',
+        method,
 
         {
             id:
-                leadId
+                entityId
         },
 
-        function (
-            result
-        ) {
+        function (result) {
 
             if (
                 result.error()
             ) {
 
                 showError(
-                    'Не удалось загрузить лид: '
+                    'Не удалось загрузить '
+                    +
+                    (
+                        entityType === 'DEAL'
+                            ? 'сделку'
+                            : 'лид'
+                    )
+                    +
+                    ': '
                     +
                     result.error_description()
                 );
@@ -547,35 +651,31 @@ function loadLead() {
             }
 
 
-            leadData =
+            entityData =
                 result.data()
-                ||
-                {};
+                || {};
 
 
             document
-                .getElementById(
-                    'clientInfo'
-                )
+                .getElementById('clientInfo')
                 .textContent =
                 'Клиент: '
                 +
                 (
-                    leadData.TITLE
+                    entityData.TITLE
                     ||
                     (
-                        'Лид #'
-                        +
-                        leadId
+                        entityType === 'DEAL'
+                            ? 'Сделка #' + entityId
+                            : 'Лид #' + entityId
                     )
                 );
 
 
             contactId =
                 Number(
-                    leadData.CONTACT_ID
-                    ||
-                    0
+                    entityData.CONTACT_ID
+                    || 0
                 );
 
 
@@ -583,73 +683,175 @@ function loadLead() {
                 !contactId
                 &&
                 Array.isArray(
-                    leadData.CONTACT_IDS
+                    entityData.CONTACT_IDS
                 )
                 &&
-                leadData.CONTACT_IDS.length
+                entityData.CONTACT_IDS.length
             ) {
 
                 contactId =
                     Number(
-                        leadData.CONTACT_IDS[0]
-                        ||
-                        0
+                        entityData.CONTACT_IDS[0]
+                        || 0
                     );
             }
 
 
-            if (
-                contactId
-            ) {
-
-                BX24.callMethod(
-
-                    'crm.contact.get',
-
-                    {
-                        id:
-                            contactId
-                    },
-
-                    function (
-                        contactResult
-                    ) {
-
-                        if (
-                            !contactResult.error()
-                        ) {
-
-                            const contact =
-                                contactResult.data()
-                                ||
-                                {};
-
-
-                            phone =
-                                extractPhone(
-                                    contact.PHONE
-                                );
-                        }
-
-
-                        if (
-                            !phone
-                        ) {
-
-                            phone =
-                                extractPhone(
-                                    leadData.PHONE
-                                );
-                        }
-                    }
+            companyId =
+                Number(
+                    entityData.COMPANY_ID
+                    || 0
                 );
 
-            } else {
 
-                phone =
-                    extractPhone(
-                        leadData.PHONE
-                    );
+            loadCommunication();
+        }
+    );
+}
+
+
+/*
+ * ========================================
+ * ПОЛУЧАЕМ ТЕЛЕФОН
+ * ========================================
+ */
+
+function loadCommunication() {
+
+    /*
+     * Сначала контакт.
+     */
+
+    if (contactId) {
+
+        BX24.callMethod(
+
+            'crm.contact.get',
+
+            {
+                id:
+                    contactId
+            },
+
+            function (result) {
+
+                if (
+                    !result.error()
+                ) {
+
+                    const contact =
+                        result.data()
+                        || {};
+
+
+                    phone =
+                        extractPhone(
+                            contact.PHONE
+                        );
+
+
+                    if (phone) {
+
+                        communicationEntityId =
+                            contactId;
+
+                        communicationEntityTypeId =
+                            3;
+
+                        return;
+                    }
+                }
+
+
+                loadCompanyCommunication();
+            }
+        );
+
+        return;
+    }
+
+
+    /*
+     * У лида телефон может находиться
+     * прямо в самом лиде.
+     */
+
+    if (
+        entityType === 'LEAD'
+    ) {
+
+        phone =
+            extractPhone(
+                entityData.PHONE
+            );
+
+
+        if (phone) {
+
+            communicationEntityId =
+                entityId;
+
+            communicationEntityTypeId =
+                1;
+
+            return;
+        }
+    }
+
+
+    loadCompanyCommunication();
+}
+
+
+/*
+ * ========================================
+ * ТЕЛЕФОН КОМПАНИИ
+ * ========================================
+ */
+
+function loadCompanyCommunication() {
+
+    if (!companyId) {
+        return;
+    }
+
+
+    BX24.callMethod(
+
+        'crm.company.get',
+
+        {
+            id:
+                companyId
+        },
+
+        function (result) {
+
+            if (
+                result.error()
+            ) {
+                return;
+            }
+
+
+            const company =
+                result.data()
+                || {};
+
+
+            phone =
+                extractPhone(
+                    company.PHONE
+                );
+
+
+            if (phone) {
+
+                communicationEntityId =
+                    companyId;
+
+                communicationEntityTypeId =
+                    4;
             }
         }
     );
@@ -662,25 +864,18 @@ function loadLead() {
  * ========================================
  */
 
-function extractPhone(
-    list
-) {
+function extractPhone(list) {
 
     if (
-        !Array.isArray(
-            list
-        )
+        !Array.isArray(list)
     ) {
-
         return '';
     }
 
 
     const item =
         list.find(
-            function (
-                item
-            ) {
+            function (item) {
 
                 return (
                     item
@@ -714,64 +909,46 @@ function saveCall() {
     const subject =
         String(
             document
-                .getElementById(
-                    'subject'
-                )
+                .getElementById('subject')
                 .value
-            ||
-            ''
-        )
-        .trim();
+            || ''
+        ).trim();
 
 
     const description =
         String(
             document
-                .getElementById(
-                    'description'
-                )
+                .getElementById('description')
                 .value
-            ||
-            ''
-        )
-        .trim();
+            || ''
+        ).trim();
 
 
     const startValue =
         document
-            .getElementById(
-                'startAt'
-            )
+            .getElementById('startAt')
             .value;
 
 
     const duration =
         Number(
             document
-                .getElementById(
-                    'duration'
-                )
+                .getElementById('duration')
                 .value
-            ||
-            30
+            || 30
         );
 
 
     const reminder =
         Number(
             document
-                .getElementById(
-                    'reminder'
-                )
+                .getElementById('reminder')
                 .value
-            ||
-            0
+            || 0
         );
 
 
-    if (
-        !subject
-    ) {
+    if (!subject) {
 
         showError(
             'Заполните поле «О чём разговор».'
@@ -781,9 +958,7 @@ function saveCall() {
     }
 
 
-    if (
-        !startValue
-    ) {
+    if (!startValue) {
 
         showError(
             'Укажите дату и время звонка.'
@@ -824,10 +999,10 @@ function saveCall() {
     const fields = {
 
         OWNER_TYPE_ID:
-            1,
+            ownerTypeId,
 
         OWNER_ID:
-            leadId,
+            entityId,
 
         TYPE_ID:
             2,
@@ -862,9 +1037,8 @@ function saveCall() {
 
         RESPONSIBLE_ID:
             Number(
-                leadData?.ASSIGNED_BY_ID
-                ||
-                0
+                entityData?.ASSIGNED_BY_ID
+                || 0
             )
             ||
             undefined,
@@ -872,10 +1046,10 @@ function saveCall() {
         BINDINGS: [
             {
                 OWNER_TYPE_ID:
-                    1,
+                    ownerTypeId,
 
                 OWNER_ID:
-                    leadId
+                    entityId
             }
         ]
     };
@@ -903,6 +1077,10 @@ function saveCall() {
 
     if (
         phone
+        &&
+        communicationEntityId
+        &&
+        communicationEntityTypeId
     ) {
 
         fields.COMMUNICATIONS = [
@@ -914,16 +1092,10 @@ function saveCall() {
                     phone,
 
                 ENTITY_ID:
-                    contactId
-                    ||
-                    leadId,
+                    communicationEntityId,
 
                 ENTITY_TYPE_ID:
-                    contactId
-                    ?
-                    3
-                    :
-                    1
+                    communicationEntityTypeId
             }
         ];
     }
@@ -934,13 +1106,9 @@ function saveCall() {
      */
 
     Object
-        .keys(
-            fields
-        )
+        .keys(fields)
         .forEach(
-            function (
-                key
-            ) {
+            function (key) {
 
                 if (
                     fields[key]
@@ -956,9 +1124,7 @@ function saveCall() {
 
     const button =
         document
-            .getElementById(
-                'saveButton'
-            );
+            .getElementById('saveButton');
 
 
     button.disabled =
@@ -977,9 +1143,7 @@ function saveCall() {
                 fields
         },
 
-        function (
-            result
-        ) {
+        function (result) {
 
             button.disabled =
                 false;
@@ -1022,22 +1186,16 @@ function saveCall() {
  * ========================================
  */
 
-function toBitrixDate(
-    date
-) {
+function toBitrixDate(date) {
 
     const pad =
-        function (
-            n
-        ) {
+        function (n) {
 
-            return String(
-                n
-            )
-            .padStart(
-                2,
-                '0'
-            );
+            return String(n)
+                .padStart(
+                    2,
+                    '0'
+                );
         };
 
 
@@ -1047,10 +1205,8 @@ function toBitrixDate(
 
     const sign =
         offset >= 0
-        ?
-        '+'
-        :
-        '-';
+            ? '+'
+            : '-';
 
 
     const abs =
@@ -1065,9 +1221,7 @@ function toBitrixDate(
         '-'
         +
         pad(
-            date.getMonth()
-            +
-            1
+            date.getMonth() + 1
         )
         +
         '-'
@@ -1141,15 +1295,11 @@ function closeForm() {
  * ========================================
  */
 
-function showError(
-    text
-) {
+function showError(text) {
 
     const el =
         document
-            .getElementById(
-                'message'
-            );
+            .getElementById('message');
 
 
     el.className =
@@ -1160,15 +1310,11 @@ function showError(
 }
 
 
-function showSuccess(
-    text
-) {
+function showSuccess(text) {
 
     const el =
         document
-            .getElementById(
-                'message'
-            );
+            .getElementById('message');
 
 
     el.className =
