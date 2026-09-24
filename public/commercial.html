@@ -62,7 +62,7 @@
             font-size: 14px;
         }
 
-        .lead-info {
+        .entity-info {
             margin-bottom: 20px;
             padding: 11px 13px;
 
@@ -272,15 +272,15 @@
 
     <div
         class="lead-info"
-        id="leadInfo"
+        id="entityInfo"
     >
-        Загрузка данных лида...
+        Загрузка данных CRM...
     </div>
 
 
     <input
         type="hidden"
-        id="lead_id"
+        id="entity_id"
         value="0"
     >
 
@@ -539,7 +539,13 @@ const STAGES_ALLOWED_TO_MOVE = [
 ];
 
 
-let lead = null;
+let entityType = '';
+let ownerTypeId = 0;
+let entityId = 0;
+let entity = null;
+
+let clientName = 'Клиент';
+let clientPhone = '';
 
 
 /*
@@ -550,41 +556,337 @@ let lead = null;
 
 BX24.init(function () {
 
-    BX24.resizeWindow(
-        820,
-        850
-    );
+    try {
+        BX24.resizeWindow(
+            820,
+            850
+        );
+    } catch (e) {
+    }
 
-    var placementInfo =
-        BX24.placement.info();
 
-    var placementOptions =
-        placementInfo
-        &&
-        placementInfo.options
-        ?
-        placementInfo.options
-        :
+    const placementInfo =
+        BX24.placement.info()
+        ||
         {};
 
-    document.getElementById(
-        'lead_id'
-    ).value =
-        Number(
-            placementOptions.ID
+
+    let placementOptions =
+        placementInfo.options
+        ||
+        {};
+
+
+    if (
+        typeof placementOptions ===
+        'string'
+    ) {
+
+        try {
+
+            placementOptions =
+                JSON.parse(
+                    placementOptions
+                );
+
+        } catch (e) {
+
+            placementOptions =
+                {};
+        }
+    }
+
+
+    const placement =
+        String(
+            placementInfo.placement
             ||
-            placementOptions.ENTITY_ID
-            ||
-            0
+            ''
+        )
+        .toUpperCase();
+
+
+    if (
+        placement.indexOf(
+            'CRM_DEAL'
+        ) !== -1
+    ) {
+
+        entityType =
+            'DEAL';
+
+        ownerTypeId =
+            2;
+
+    } else if (
+        placement.indexOf(
+            'CRM_LEAD'
+        ) !== -1
+    ) {
+
+        entityType =
+            'LEAD';
+
+        ownerTypeId =
+            1;
+
+    } else {
+
+        entityType =
+            detectEntityType(
+                placementOptions
+            );
+
+
+        ownerTypeId =
+            entityType === 'DEAL'
+            ?
+            2
+            :
+            (
+                entityType === 'LEAD'
+                ?
+                1
+                :
+                0
+            );
+    }
+
+
+    entityId =
+        findEntityId(
+            placementOptions
         );
+
+
+    document
+        .getElementById(
+            'entity_id'
+        )
+        .value =
+        entityId;
+
+
+    if (
+        !entityId
+        ||
+        !ownerTypeId
+    ) {
+
+        showError(
+            'Битрикс24 не передал ID текущего CRM-элемента'
+        );
+
+        document
+            .getElementById(
+                'createButton'
+            )
+            .disabled =
+            true;
+
+        return;
+    }
+
 
     setDefaultValidUntil();
 
     calculateTotal();
 
-    loadLead();
+    loadEntity();
 
 });
+
+
+function detectEntityType(
+    obj
+) {
+
+    if (
+        !obj
+        ||
+        typeof obj !==
+        'object'
+    ) {
+
+        return '';
+    }
+
+
+    const typeId =
+        Number(
+            obj.ENTITY_TYPE_ID
+            ||
+            obj.entityTypeId
+            ||
+            obj.OWNER_TYPE_ID
+            ||
+            obj.ownerTypeId
+            ||
+            0
+        );
+
+
+    if (
+        typeId === 2
+    ) {
+
+        return 'DEAL';
+    }
+
+
+    if (
+        typeId === 1
+    ) {
+
+        return 'LEAD';
+    }
+
+
+    if (
+        obj.DEAL_ID
+        ||
+        obj.dealId
+    ) {
+
+        return 'DEAL';
+    }
+
+
+    if (
+        obj.LEAD_ID
+        ||
+        obj.entityId
+    ) {
+
+        return 'LEAD';
+    }
+
+
+    for (
+        const key
+        in obj
+    ) {
+
+        if (
+            obj[key]
+            &&
+            typeof obj[key] ===
+            'object'
+        ) {
+
+            const found =
+                detectEntityType(
+                    obj[key]
+                );
+
+
+            if (
+                found
+            ) {
+
+                return found;
+            }
+        }
+    }
+
+
+    return '';
+}
+
+
+function findEntityId(
+    obj
+) {
+
+    if (
+        !obj
+        ||
+        typeof obj !==
+        'object'
+    ) {
+
+        return 0;
+    }
+
+
+    const directKeys = [
+
+        'DEAL_ID',
+        'dealId',
+
+        'LEAD_ID',
+        'entityId',
+
+        'ENTITY_ID',
+        'entityId',
+
+        'OWNER_ID',
+        'ownerId',
+
+        'ID',
+        'id'
+
+    ];
+
+
+    for (
+        const key
+        of directKeys
+    ) {
+
+        const value =
+            Number(
+                obj[key]
+                ||
+                0
+            );
+
+
+        if (
+            Number.isFinite(
+                value
+            )
+            &&
+            value > 0
+        ) {
+
+            return Math.trunc(
+                value
+            );
+        }
+    }
+
+
+    for (
+        const key
+        in obj
+    ) {
+
+        if (
+            obj[key]
+            &&
+            typeof obj[key] ===
+            'object'
+        ) {
+
+            const found =
+                findEntityId(
+                    obj[key]
+                );
+
+
+            if (
+                found
+            ) {
+
+                return found;
+            }
+        }
+    }
+
+
+    return 0;
+}
 
 
 /*
@@ -684,96 +986,374 @@ function toInputDate(date) {
 
 /*
  * ========================================
- * ЗАГРУЖАЕМ ЛИД
+ * ЗАГРУЖАЕМ CRM-ЭЛЕМЕНТ
  * ========================================
  */
 
-function loadLead() {
+async function loadEntity() {
 
-    const leadId =
-        Number(
+    try {
+
+        const method =
+            entityType === 'DEAL'
+            ?
+            'crm.deal.get'
+            :
+            'crm.lead.get';
+
+
+        entity =
+            await callBitrix(
+                method,
+                {
+                    id:
+                        entityId
+                }
+            );
+
+
+        if (
+            !entity
+        ) {
+
+            throw new Error(
+                'CRM-элемент не найден'
+            );
+        }
+
+
+        document
+            .getElementById(
+                'entityInfo'
+            )
+            .textContent =
+            (
+                entityType === 'DEAL'
+                ?
+                'Сделка: '
+                :
+                'Лид: '
+            )
+            +
+            (
+                entity.TITLE
+                ||
+                (
+                    entityType === 'DEAL'
+                    ?
+                    'Сделка #' + entityId
+                    :
+                    'Лид #' + entityId
+                )
+            );
+
+
+        if (
+            entity.ASSIGNED_BY_ID
+        ) {
+
             document
                 .getElementById(
-                    'lead_id'
+                    'responsible_id'
                 )
-                .value
-        );
+                .value =
+                entity.ASSIGNED_BY_ID;
 
 
-    if (!leadId) {
+            loadResponsibleName(
+                entity.ASSIGNED_BY_ID
+            );
+        }
+
+
+        await loadClientData();
+
+
+    } catch (
+        error
+    ) {
 
         showError(
-            'Битрикс24 не передал ID лида'
+            'Ошибка получения CRM-элемента: '
+            +
+            (
+                error.message
+                ||
+                String(
+                    error
+                )
+            )
         );
+    }
+}
 
-        return;
+
+async function loadClientData() {
+
+    clientName =
+        'Клиент';
+
+    clientPhone =
+        '';
+
+
+    if (
+        entityType === 'LEAD'
+    ) {
+
+        const personName =
+            [
+                entity.LAST_NAME,
+                entity.NAME,
+                entity.SECOND_NAME
+            ]
+            .filter(
+                Boolean
+            )
+            .join(
+                ' '
+            )
+            .trim();
+
+
+        clientName =
+            personName
+            ||
+            entity.COMPANY_TITLE
+            ||
+            entity.TITLE
+            ||
+            (
+                'Лид #'
+                +
+                entityId
+            );
+
+
+        clientPhone =
+            extractFirstPhone(
+                entity.PHONE
+            );
+
+
+        if (
+            clientPhone
+        ) {
+
+            return;
+        }
     }
 
 
-    BX24.callMethod(
-        'crm.lead.get',
+    const contactId =
+        Number(
+            entity.CONTACT_ID
+            ||
+            (
+                Array.isArray(
+                    entity.CONTACT_IDS
+                )
+                &&
+                entity.CONTACT_IDS.length
+                ?
+                entity.CONTACT_IDS[0]
+                :
+                0
+            )
+            ||
+            0
+        );
 
-        {
-            id:
-                leadId
-        },
 
-        function(result) {
+    if (
+        contactId
+    ) {
 
-            if (result.error()) {
+        try {
 
-                showError(
-                    'Ошибка получения лида: '
-                    +
-                    result.error_description()
+            const contact =
+                await callBitrix(
+                    'crm.contact.get',
+                    {
+                        id:
+                            contactId
+                    }
                 );
 
-                return;
-            }
+
+            if (
+                contact
+            ) {
+
+                const contactName =
+                    [
+                        contact.LAST_NAME,
+                        contact.NAME,
+                        contact.SECOND_NAME
+                    ]
+                    .filter(
+                        Boolean
+                    )
+                    .join(
+                        ' '
+                    )
+                    .trim();
 
 
-            lead =
-                result.data();
+                if (
+                    contactName
+                ) {
+
+                    clientName =
+                        contactName;
+                }
 
 
-            document
-                .getElementById(
-                    'leadInfo'
-                )
-                .textContent =
-                    'Лид: '
-                    +
-                    (
-                        lead.TITLE
-                        ||
-                        'Лид #' + leadId
+                const phone =
+                    extractFirstPhone(
+                        contact.PHONE
                     );
 
 
-            /*
-             * Ответственный за лид
-             * автоматически становится
-             * ответственным за КП.
-             */
+                if (
+                    phone
+                ) {
+
+                    clientPhone =
+                        phone;
+                }
+            }
+
+        } catch (e) {
+
+            console.warn(
+                'Не удалось получить контакт:',
+                e
+            );
+        }
+    }
+
+
+    const companyId =
+        Number(
+            entity.COMPANY_ID
+            ||
+            0
+        );
+
+
+    if (
+        companyId
+        &&
+        (
+            clientName === 'Клиент'
+            ||
+            !clientPhone
+        )
+    ) {
+
+        try {
+
+            const company =
+                await callBitrix(
+                    'crm.company.get',
+                    {
+                        id:
+                            companyId
+                    }
+                );
+
 
             if (
-                lead.ASSIGNED_BY_ID
+                company
             ) {
 
-                document
-                    .getElementById(
-                        'responsible_id'
-                    )
-                    .value =
-                        lead.ASSIGNED_BY_ID;
+                if (
+                    clientName === 'Клиент'
+                    &&
+                    company.TITLE
+                ) {
+
+                    clientName =
+                        company.TITLE;
+                }
 
 
-                loadResponsibleName(
-                    lead.ASSIGNED_BY_ID
+                if (
+                    !clientPhone
+                ) {
+
+                    clientPhone =
+                        extractFirstPhone(
+                            company.PHONE
+                        );
+                }
+            }
+
+        } catch (e) {
+
+            console.warn(
+                'Не удалось получить компанию:',
+                e
+            );
+        }
+    }
+
+
+    if (
+        clientName === 'Клиент'
+    ) {
+
+        clientName =
+            entity.TITLE
+            ||
+            (
+                entityType === 'DEAL'
+                ?
+                'Сделка #' + entityId
+                :
+                'Лид #' + entityId
+            );
+    }
+}
+
+
+function extractFirstPhone(
+    phones
+) {
+
+    if (
+        !Array.isArray(
+            phones
+        )
+    ) {
+
+        return '';
+    }
+
+
+    const item =
+        phones.find(
+            function (
+                phoneItem
+            ) {
+
+                return (
+                    phoneItem
+                    &&
+                    phoneItem.VALUE
                 );
             }
-        }
-    );
+        );
+
+
+    return item
+        ?
+        String(
+            item.VALUE
+        )
+        :
+        '';
 }
 
 
@@ -935,81 +1515,27 @@ function calculateTotal() {
 
 /*
  * ========================================
- * ИМЯ КЛИЕНТА
+ * ИМЯ И ТЕЛЕФОН КЛИЕНТА
  * ========================================
  */
 
-function getLeadClientName() {
-
-    if (!lead) {
-        return 'Клиент';
-    }
-
-
-    const personName =
-        [
-            lead.LAST_NAME,
-            lead.NAME,
-            lead.SECOND_NAME
-        ]
-        .filter(Boolean)
-        .join(' ');
-
-
-    if (personName) {
-        return personName;
-    }
-
-
-    if (
-        lead.COMPANY_TITLE
-    ) {
-
-        return lead.COMPANY_TITLE;
-    }
-
-
-    if (
-        lead.TITLE
-    ) {
-
-        return lead.TITLE;
-    }
-
+function getClientName() {
 
     return (
-        'Лид #' +
-        lead.ID
+        clientName
+        ||
+        'Клиент'
     );
 }
 
 
-/*
- * ========================================
- * ТЕЛЕФОН КЛИЕНТА
- * ========================================
- */
+function getClientPhone() {
 
-function getLeadPhone() {
-
-    if (
-        lead
-        &&
-        Array.isArray(
-            lead.PHONE
-        )
-        &&
-        lead.PHONE.length > 0
-    ) {
-
-        return (
-            lead.PHONE[0].VALUE
-            ||
-            ''
-        );
-    }
-
-    return '';
+    return (
+        clientPhone
+        ||
+        ''
+    );
 }
 
 
@@ -1804,11 +2330,11 @@ async function createOffer() {
         hideMessage();
 
 
-        const leadId =
+        entityId =
             Number(
                 document
                     .getElementById(
-                        'lead_id'
+                        'entity_id'
                     )
                     .value
             );
@@ -1910,10 +2436,10 @@ async function createOffer() {
          * ================================
          */
 
-        if (!leadId) {
+        if (!entityId) {
 
             showError(
-                'Не определён лид'
+                'Не определён CRM-элемент'
             );
 
             return;
@@ -2032,7 +2558,7 @@ async function createOffer() {
         const offerNumber =
             'КП-'
             +
-            leadId
+            entityId
             +
             '-'
             +
@@ -2055,17 +2581,17 @@ async function createOffer() {
 
         const offerData = {
 
-            leadId:
-                leadId,
+            entityId:
+                entityId,
 
             offerNumber:
                 offerNumber,
 
             clientName:
-                getLeadClientName(),
+                getClientName(),
 
             clientPhone:
-                getLeadPhone(),
+                getClientPhone(),
 
             product:
                 product,
@@ -2114,9 +2640,13 @@ async function createOffer() {
 
 
         const fileName =
-            'KP_Lead_'
+            'KP_'
             +
-            leadId
+            entityType
+            +
+            '_'
+            +
+            entityId
             +
             '_'
             +
@@ -2514,10 +3044,10 @@ async function createOffer() {
             {
 
                 ownerTypeId:
-                    1,
+                    ownerTypeId,
 
                 ownerId:
-                    leadId,
+                    entityId,
 
 
                 fields: {
@@ -2543,7 +3073,11 @@ async function createOffer() {
                     originId:
                         'KP_'
                         +
-                        leadId
+                        entityType
+                        +
+                        '_'
+                        +
+                        entityId
                         +
                         '_'
                         +
@@ -2629,7 +3163,7 @@ async function createOffer() {
          */
 
         await moveToNegotiations(
-            leadId
+            entityId
         );
 
 
@@ -2673,11 +3207,11 @@ async function createOffer() {
  */
 
 async function moveToNegotiations(
-    leadId
+    currentEntityId
 ) {
 
     if (
-        !lead
+        !entity
     ) {
 
         return;
@@ -2686,10 +3220,31 @@ async function moveToNegotiations(
 
     try {
 
+        const statusEntityId =
+            entityType === 'DEAL'
+            ?
+            (
+                Number(
+                    entity.CATEGORY_ID
+                    ||
+                    0
+                ) > 0
+                ?
+                'DEAL_STAGE_'
+                +
+                Number(
+                    entity.CATEGORY_ID
+                )
+                :
+                'DEAL_STAGE'
+            )
+            :
+            'STATUS';
+
+
         const statuses =
             await callBitrix(
                 'crm.status.list',
-
                 {
 
                     order: {
@@ -2701,7 +3256,7 @@ async function moveToNegotiations(
                     filter: {
 
                         ENTITY_ID:
-                            'STATUS'
+                            statusEntityId
                     }
                 }
             );
@@ -2717,9 +3272,19 @@ async function moveToNegotiations(
         }
 
 
+        const currentStatusId =
+            entityType === 'DEAL'
+            ?
+            entity.STAGE_ID
+            :
+            entity.STATUS_ID;
+
+
         const current =
             statuses.find(
-                function(status) {
+                function (
+                    status
+                ) {
 
                     return (
                         String(
@@ -2727,7 +3292,7 @@ async function moveToNegotiations(
                         )
                         ===
                         String(
-                            lead.STATUS_ID
+                            currentStatusId
                         )
                     );
                 }
@@ -2742,15 +3307,10 @@ async function moveToNegotiations(
         }
 
 
-        /*
-         * Не двигаем лид назад,
-         * если он уже дальше.
-         */
-
         const canMove =
             STAGES_ALLOWED_TO_MOVE
                 .some(
-                    function(
+                    function (
                         stageName
                     ) {
 
@@ -2779,7 +3339,9 @@ async function moveToNegotiations(
 
         const target =
             statuses.find(
-                function(status) {
+                function (
+                    status
+                ) {
 
                     return (
                         status.NAME
@@ -2808,21 +3370,50 @@ async function moveToNegotiations(
         }
 
 
-        await callBitrix(
-            'crm.lead.update',
+        if (
+            entityType === 'DEAL'
+        ) {
 
-            {
+            await callBitrix(
+                'crm.deal.update',
+                {
 
-                id:
-                    leadId,
+                    id:
+                        currentEntityId,
 
-                fields: {
+                    fields: {
 
-                    STATUS_ID:
-                        target.STATUS_ID
+                        STAGE_ID:
+                            target.STATUS_ID
+                    }
                 }
-            }
-        );
+            );
+
+
+            entity.STAGE_ID =
+                target.STATUS_ID;
+
+        } else {
+
+            await callBitrix(
+                'crm.lead.update',
+                {
+
+                    id:
+                        currentEntityId,
+
+                    fields: {
+
+                        STATUS_ID:
+                            target.STATUS_ID
+                    }
+                }
+            );
+
+
+            entity.STATUS_ID =
+                target.STATUS_ID;
+        }
 
 
     } catch (
