@@ -435,7 +435,30 @@ BX24.init(function () {
             e
         );
     }
+    DEAL_CATEGORY_ID =
+        Number(
+            BX24.appOption.get(
+                'RL_CATEGORY_ID'
+            )
+            ||
+            0
+        );
 
+
+    console.log(
+        'CATEGORY_ID воронки РЛ:',
+        DEAL_CATEGORY_ID
+    );
+
+
+    if (!DEAL_CATEGORY_ID) {
+
+        showError(
+            'Не найден CATEGORY_ID воронки «РЛ». Сначала запустите установку приложения.'
+        );
+
+        return;
+    }
 
     /*
      * Блокируем автозакрытие СРАЗУ при открытии CALL_CARD.
