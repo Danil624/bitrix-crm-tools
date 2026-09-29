@@ -1,346 +1,155 @@
 <!doctype html>
 <html lang="ru">
-
 <head>
-
     <meta charset="UTF-8">
-
     <title>CRM инструменты</title>
-
     <script src="https://api.bitrix24.com/api/v1/"></script>
 
-
     <style>
-
-        * {
-            box-sizing: border-box;
-        }
-
+        * { box-sizing: border-box; }
 
         body {
-
             margin: 0;
             padding: 25px;
-
-            font-family:
-                Arial,
-                Helvetica,
-                sans-serif;
-
-            background:
-                #f5f7f8;
-
-            color:
-                #333;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f7f8;
+            color: #333;
         }
-
 
         .card {
-
-            max-width:
-                700px;
-
-            margin:
-                0 auto;
-
-            padding:
-                25px;
-
-            background:
-                white;
-
-            border-radius:
-                12px;
-
-            box-shadow:
-                0 3px 15px
-                rgba(0,0,0,.08);
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 25px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 3px 15px rgba(0,0,0,.08);
         }
-
 
         h1 {
-
-            margin:
-                0 0 5px;
-
-            font-size:
-                24px;
+            margin: 0 0 5px;
+            font-size: 24px;
         }
-
 
         .subtitle {
-
-            margin-bottom:
-                22px;
-
-            color:
-                #777;
-
-            font-size:
-                14px;
+            margin-bottom: 22px;
+            color: #777;
+            font-size: 14px;
         }
-
 
         .summary {
-
-            margin-bottom:
-                22px;
-
-            padding:
-                13px;
-
-            background:
-                #f6f8f9;
-
-            border-radius:
-                7px;
-
-            line-height:
-                1.6;
-
-            font-size:
-                14px;
+            margin-bottom: 22px;
+            padding: 13px;
+            background: #f6f8f9;
+            border-radius: 7px;
+            line-height: 1.6;
+            font-size: 14px;
         }
-
 
         .form-group {
-
-            margin-bottom:
-                18px;
+            margin-bottom: 18px;
         }
-
 
         label {
-
-            display:
-                block;
-
-            margin-bottom:
-                7px;
-
-            font-size:
-                14px;
-
-            font-weight:
-                600;
+            display: block;
+            margin-bottom: 7px;
+            font-size: 14px;
+            font-weight: 600;
         }
-
 
         input,
         textarea,
         select {
-
-            width:
-                100%;
-
-            padding:
-                11px 12px;
-
-            border:
-                1px solid #c6cdd3;
-
-            border-radius:
-                6px;
-
-            background:
-                white;
-
-            font-size:
-                15px;
-
-            outline:
-                none;
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid #c6cdd3;
+            border-radius: 6px;
+            background: #fff;
+            font-size: 15px;
+            outline: none;
         }
-
 
         textarea {
-
-            min-height:
-                90px;
-
-            resize:
-                vertical;
+            min-height: 90px;
+            resize: vertical;
         }
-
 
         input:focus,
         textarea:focus,
         select:focus {
-
-            border-color:
-                #2fc6f6;
+            border-color: #2fc6f6;
         }
-
-
-        /*
-         * ОЦЕНКА 1-5
-         */
 
         .rating {
-
-            display:
-                flex;
-
-            gap:
-                9px;
+            display: flex;
+            gap: 9px;
         }
-
 
         .rating button {
-
-            width:
-                48px;
-
-            height:
-                48px;
-
-            border:
-                1px solid #c6cdd3;
-
-            border-radius:
-                8px;
-
-            background:
-                white;
-
-            cursor:
-                pointer;
-
-            font-size:
-                17px;
-
-            font-weight:
-                bold;
+            width: 48px;
+            height: 48px;
+            border: 1px solid #c6cdd3;
+            border-radius: 8px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 17px;
+            font-weight: bold;
         }
-
 
         .rating button.active {
-
-            background:
-                #2fc6f6;
-
-            border-color:
-                #2fc6f6;
-
-            color:
-                white;
+            background: #2fc6f6;
+            border-color: #2fc6f6;
+            color: #fff;
         }
-
 
         .submit {
-
-            width:
-                100%;
-
-            padding:
-                13px;
-
-            border:
-                none;
-
-            border-radius:
-                6px;
-
-            background:
-                #2fc6f6;
-
-            color:
-                white;
-
-            cursor:
-                pointer;
-
-            font-size:
-                16px;
-
-            font-weight:
-                600;
+            width: 100%;
+            padding: 13px;
+            border: none;
+            border-radius: 6px;
+            background: #2fc6f6;
+            color: #fff;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
         }
-
 
         .submit:disabled {
-
-            opacity:
-                .6;
-
-            cursor:
-                default;
+            opacity: .6;
+            cursor: default;
         }
-
 
         .message {
-
-            display:
-                none;
-
-            margin-top:
-                15px;
-
-            padding:
-                12px;
-
-            border-radius:
-                6px;
+            display: none;
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
         }
-
 
         .message.error {
-
-            display:
-                block;
-
-            background:
-                #fdeaea;
-
-            color:
-                #b93030;
+            display: block;
+            background: #fdeaea;
+            color: #b93030;
         }
-
 
         .message.success {
-
-            display:
-                block;
-
-            background:
-                #e7f7ec;
-
-            color:
-                #24743a;
+            display: block;
+            background: #e7f7ec;
+            color: #24743a;
         }
-
 
         #defaultPage {
-
-            text-align:
-                center;
+            text-align: center;
         }
-
 
         #resultPage {
-
-            display:
-                none;
+            display: none;
         }
-
     </style>
-
 </head>
-
 
 <body>
 
-
-<!--
-=========================================
-ОБЫЧНОЕ ОТКРЫТИЕ ПРИЛОЖЕНИЯ
-=========================================
--->
-
-<div
-    class="card"
-    id="defaultPage"
->
+<div class="card" id="defaultPage">
 
     <h1>
         CRM-инструменты
@@ -353,28 +162,16 @@
 </div>
 
 
-<!--
-=========================================
-ФОРМА РЕЗУЛЬТАТА ТЕСТ-ДРАЙВА
-=========================================
--->
-
-<div
-    class="card"
-    id="resultPage"
->
-
+<div class="card" id="resultPage">
 
     <h1 id="pageTitle">
         Результат тест-драйва
     </h1>
 
-
     <div
         class="subtitle"
         id="pageSubtitle"
     ></div>
-
 
     <div
         class="summary"
@@ -382,21 +179,13 @@
     ></div>
 
 
-    <!--
-    =====================================
-    УСПЕШНЫЙ ТЕСТ-ДРАЙВ
-    =====================================
-    -->
-
     <div id="passedForm">
-
 
         <div class="form-group">
 
             <label>
                 Общая оценка клиента
             </label>
-
 
             <div
                 class="rating"
@@ -542,8 +331,8 @@
                     Клиент думает
                 </option>
 
-                <option value="Перевести в сделку">
-                    Перевести в сделку
+                <option value="Подготовить оформление">
+                    Подготовить оформление
                 </option>
 
                 <option value="Другое">
@@ -563,21 +352,13 @@
             Сохранить результат
         </button>
 
-
     </div>
 
-
-    <!--
-    =====================================
-    НЕ СОСТОЯЛСЯ
-    =====================================
-    -->
 
     <div
         id="failedForm"
         style="display:none;"
     >
-
 
         <div class="form-group">
 
@@ -638,7 +419,6 @@
             Сохранить
         </button>
 
-
     </div>
 
 
@@ -647,27 +427,20 @@
         class="message"
     ></div>
 
-
 </div>
 
 
 <script>
 
-
-/*
- * ========================================
- * КОНТЕКСТ
- * ========================================
- */
-
 let context =
     null;
 
-
 let rating =
     0;
+
 const TEST_DRIVE_WATCH_DELAY_MS =
     5000;
+
 
 /*
  * ========================================
@@ -676,16 +449,12 @@ const TEST_DRIVE_WATCH_DELAY_MS =
  */
 
 BX24.init(
-    function() {
-
-        /*
-         * Получаем контекст,
-         * который openRestApp
-         * передал из кнопки дела.
-         */
+    function () {
 
         const info =
-            BX24.placement.info();
+            BX24.placement.info()
+            ||
+            {};
 
 
         console.log(
@@ -694,29 +463,37 @@ BX24.init(
         );
 
 
-        const options =
+        let options =
             info.options
             ||
             {};
 
 
-        /*
-         * В зависимости от версии Битрикса
-         * actionParams могут лежать
-         * непосредственно в options
-         * либо во вложенном объекте.
-         */
+        if (
+            typeof options ===
+            'string'
+        ) {
+
+            try {
+
+                options =
+                    JSON.parse(
+                        options
+                    );
+
+            } catch (e) {
+
+                options =
+                    {};
+            }
+        }
+
 
         const params =
             findActionParams(
                 options
             );
 
-
-        /*
-         * Объединяем системный контекст
-         * и наши параметры.
-         */
 
         context = {
 
@@ -726,13 +503,16 @@ BX24.init(
         };
 
 
+        /*
+         * Открываем форму назначения тест-драйва.
+         */
+
         if (
-            context.mode
-            ===
+            context.mode ===
             'create_testdrive'
         ) {
 
-            openExistingLeadTool(
+            openExistingDealTool(
                 '/testdrive.php',
                 context
             );
@@ -741,13 +521,16 @@ BX24.init(
         }
 
 
+        /*
+         * Открываем форму КП.
+         */
+
         if (
-            context.mode
-            ===
+            context.mode ===
             'create_commercial'
         ) {
 
-            openExistingLeadTool(
+            openExistingDealTool(
                 '/commercial.php',
                 context
             );
@@ -756,27 +539,29 @@ BX24.init(
         }
 
 
+        /*
+         * Результат тест-драйва.
+         */
+
         if (
-            context.mode
-            ===
+            context.mode ===
             'testdrive_result'
         ) {
 
             showResultPage();
 
-        } else {
+            initRating();
 
-            document
-                .getElementById(
-                    'defaultPage'
-                )
-                .style
-                .display =
-                    'block';
+            return;
         }
 
 
-        initRating();
+        document
+            .getElementById(
+                'defaultPage'
+            )
+            .style.display =
+                'block';
 
     }
 );
@@ -784,7 +569,7 @@ BX24.init(
 
 /*
  * ========================================
- * ИЩЕМ НАШИ ACTION PARAMS
+ * ACTION PARAMS
  * ========================================
  */
 
@@ -793,9 +578,11 @@ function isSupportedActionMode(
 ) {
 
     return [
+
         'testdrive_result',
         'create_testdrive',
         'create_commercial'
+
     ].includes(
         String(
             mode || ''
@@ -811,7 +598,8 @@ function findActionParams(
     if (
         !obj
         ||
-        typeof obj !== 'object'
+        typeof obj !==
+        'object'
     ) {
 
         return {};
@@ -831,11 +619,8 @@ function findActionParams(
     const candidates = [
 
         obj.actionParams,
-
         obj.ACTION_PARAMS,
-
         obj.value,
-
         obj.params
 
     ];
@@ -849,8 +634,8 @@ function findActionParams(
         if (
             candidate
             &&
-            typeof candidate
-            === 'object'
+            typeof candidate ===
+            'object'
             &&
             isSupportedActionMode(
                 candidate.mode
@@ -870,8 +655,8 @@ function findActionParams(
         if (
             obj[key]
             &&
-            typeof obj[key]
-            === 'object'
+            typeof obj[key] ===
+            'object'
         ) {
 
             const found =
@@ -896,24 +681,52 @@ function findActionParams(
 }
 
 
-function openExistingLeadTool(
+/*
+ * ========================================
+ * ID СДЕЛКИ
+ * ========================================
+ */
+
+function getDealId(
+    params
+) {
+
+    return Number(
+
+        params.dealId
+        ||
+        params.DEAL_ID
+        ||
+        params.entityId
+        ||
+        params.ENTITY_ID
+        ||
+        params.ID
+        ||
+        0
+
+    );
+}
+
+
+/*
+ * ========================================
+ * ОТКРЫТИЕ ФОРМЫ ДЛЯ СДЕЛКИ
+ * ========================================
+ */
+
+function openExistingDealTool(
     path,
     params
 ) {
 
-    const leadId =
-        Number(
-            params.leadId
-            ||
-            params.entityId
-            ||
-            params.ID
-            ||
-            0
+    const dealId =
+        getDealId(
+            params
         );
 
 
-    if (!leadId) {
+    if (!dealId) {
 
         document
             .getElementById(
@@ -929,7 +742,7 @@ function openExistingLeadTool(
             )
             .innerHTML =
                 '<h1>CRM-инструменты</h1>' +
-                '<p>Не удалось определить ID лида.</p>';
+                '<p>Не удалось определить ID сделки.</p>';
 
         return;
     }
@@ -938,9 +751,9 @@ function openExistingLeadTool(
     try {
 
         sessionStorage.setItem(
-            'crm_tool_lead_id',
+            'crm_tool_deal_id',
             String(
-                leadId
+                dealId
             )
         );
 
@@ -962,27 +775,38 @@ function openExistingLeadTool(
 
 
     window.location.replace(
-        path +
-        separator +
-        'leadId=' +
+
+        path
+        +
+        separator
+        +
+        'dealId='
+        +
         encodeURIComponent(
-            leadId
-        ) +
-        '&entityId=' +
-        encodeURIComponent(
-            leadId
-        ) +
-        '&ID=' +
-        encodeURIComponent(
-            leadId
+            dealId
         )
+        +
+        '&entityId='
+        +
+        encodeURIComponent(
+            dealId
+        )
+        +
+        '&entityType=DEAL'
+        +
+        '&ID='
+        +
+        encodeURIComponent(
+            dealId
+        )
+
     );
 }
 
 
 /*
  * ========================================
- * ОТКРЫВАЕМ НУЖНУЮ ФОРМУ
+ * РЕЗУЛЬТАТ ТЕСТ-ДРАЙВА
  * ========================================
  */
 
@@ -1004,40 +828,43 @@ function showResultPage() {
             'block';
 
 
-    const car =
-        context.car
-        ||
-        'Автомобиль';
-
-
     document
         .getElementById(
             'summary'
         )
         .innerHTML =
-            '<b>Автомобиль:</b> ' +
-            escapeHtml(car) +
-            '<br>' +
 
-            '<b>Дата:</b> ' +
-            escapeHtml(
-                context.date
-                ||
-                '—'
-            ) +
-            '<br>' +
-
-            '<b>Ответственный:</b> ' +
-            escapeHtml(
-                context.responsibleName
-                ||
-                '—'
-            );
+        '<b>Автомобиль:</b> '
+        +
+        escapeHtml(
+            context.car
+            ||
+            'Автомобиль'
+        )
+        +
+        '<br>'
+        +
+        '<b>Дата:</b> '
+        +
+        escapeHtml(
+            context.date
+            ||
+            '—'
+        )
+        +
+        '<br>'
+        +
+        '<b>Ответственный:</b> '
+        +
+        escapeHtml(
+            context.responsibleName
+            ||
+            '—'
+        );
 
 
     if (
-        context.result
-        ===
+        context.result ===
         'failed'
     ) {
 
@@ -1097,12 +924,14 @@ function initRating() {
             '#rating button'
         )
         .forEach(
-            function(button) {
+            function (
+                button
+            ) {
 
                 button.addEventListener(
                     'click',
 
-                    function() {
+                    function () {
 
                         rating =
                             Number(
@@ -1115,18 +944,19 @@ function initRating() {
                                 '#rating button'
                             )
                             .forEach(
-                                function(item) {
+                                function (
+                                    item
+                                ) {
 
-                                    item.classList
-                                        .toggle(
-                                            'active',
+                                    item.classList.toggle(
+                                        'active',
 
-                                            Number(
-                                                item.dataset.rating
-                                            )
-                                            <=
-                                            rating
-                                        );
+                                        Number(
+                                            item.dataset.rating
+                                        )
+                                        <=
+                                        rating
+                                    );
                                 }
                             );
                     }
@@ -1148,7 +978,7 @@ function callBitrix(
 ) {
 
     return new Promise(
-        function(
+        function (
             resolve,
             reject
         ) {
@@ -1159,7 +989,9 @@ function callBitrix(
 
                 params,
 
-                function(result) {
+                function (
+                    result
+                ) {
 
                     if (
                         result.error()
@@ -1188,27 +1020,73 @@ function callBitrix(
     );
 }
 
+
 /*
  * ========================================
- * ПЕРЕВОД ЛИДА НА СТАДИЮ ПО НАЗВАНИЮ
+ * СДЕЛКА → СТАДИЯ ПО НАЗВАНИЮ
  * ========================================
  */
 
-async function moveLeadToStageByName(
-    leadId,
+async function moveDealToStageByName(
+    dealId,
     stageName
 ) {
 
+    /*
+     * Сначала получаем сделку,
+     * чтобы узнать CATEGORY_ID.
+     */
+
+    const deal =
+        await callBitrix(
+
+            'crm.deal.get',
+
+            {
+                id:
+                    dealId
+            }
+        );
+
+
+    const categoryId =
+        Number(
+            deal.CATEGORY_ID
+            ||
+            0
+        );
+
+
+    /*
+     * Для воронки РЛ это будет, например:
+     * DEAL_STAGE_16
+     */
+
+    const stageEntityId =
+        categoryId > 0
+        ?
+        'DEAL_STAGE_' + categoryId
+        :
+        'DEAL_STAGE';
+
+
     const statuses =
         await callBitrix(
+
             'crm.status.list',
+
             {
+
                 order: {
-                    SORT: 'ASC'
+
+                    SORT:
+                        'ASC'
                 },
 
                 filter: {
-                    ENTITY_ID: 'STATUS'
+
+                    ENTITY_ID:
+                        stageEntityId
                 }
             }
         );
@@ -1216,15 +1094,21 @@ async function moveLeadToStageByName(
 
     const target =
         (statuses || []).find(
-            function(status) {
+            function (
+                status
+            ) {
 
                 return String(
                     status.NAME || ''
-                ).trim().toLowerCase()
+                )
+                .trim()
+                .toLowerCase()
                 ===
                 String(
                     stageName || ''
-                ).trim().toLowerCase();
+                )
+                .trim()
+                .toLowerCase();
             }
         );
 
@@ -1232,21 +1116,29 @@ async function moveLeadToStageByName(
     if (!target) {
 
         throw new Error(
-            'Не найдена стадия «' +
-            stageName +
-            '»'
+
+            'Не найдена стадия «'
+            +
+            stageName
+            +
+            '» в текущей воронке сделки'
+
         );
     }
 
 
     await callBitrix(
-        'crm.lead.update',
+
+        'crm.deal.update',
+
         {
-            id: leadId,
+
+            id:
+                dealId,
 
             fields: {
 
-                STATUS_ID:
+                STAGE_ID:
                     target.STATUS_ID
             }
         }
@@ -1256,12 +1148,12 @@ async function moveLeadToStageByName(
 
 /*
  * ========================================
- * КОНТРОЛЬ ПОСЛЕ УСПЕШНОГО ТЕСТ-ДРАЙВА
+ * КОНТРОЛЬ ПОСЛЕ ТЕСТ-ДРАЙВА
  * ========================================
  */
 
 async function startPassedTestDriveWatch(
-    leadId,
+    dealId,
     activityId
 ) {
 
@@ -1278,15 +1170,18 @@ async function startPassedTestDriveWatch(
     ) {
 
         throw new Error(
-            'Не удалось получить авторизацию для контроля лида'
+            'Не удалось получить авторизацию для контроля сделки'
         );
     }
 
 
     const response =
         await fetch(
+
             '/testdrive-watch.php',
+
             {
+
                 method:
                     'POST',
 
@@ -1306,9 +1201,17 @@ async function startPassedTestDriveWatch(
                             accessToken:
                                 auth.access_token,
 
-                            leadId:
+                            entityType:
+                                'DEAL',
+
+                            entityId:
                                 Number(
-                                    leadId
+                                    dealId
+                                ),
+
+                            dealId:
+                                Number(
+                                    dealId
                                 ),
 
                             activityId:
@@ -1335,17 +1238,21 @@ async function startPassedTestDriveWatch(
     ) {
 
         throw new Error(
+
             data.error_description
             ||
             data.error
             ||
             'Не удалось запустить контроль после тест-драйва'
+
         );
     }
 }
+
+
 /*
  * ========================================
- * СОХРАНЯЕМ УСПЕШНЫЙ ТЕСТ-ДРАЙВ
+ * ТЕСТ-ДРАЙВ ПРОЙДЕН
  * ========================================
  */
 
@@ -1447,17 +1354,20 @@ async function savePassedResult() {
                 impression,
 
             liked:
-                liked || '—',
+                liked
+                ||
+                '—',
 
             concerns:
-                concerns || '—',
+                concerns
+                ||
+                '—',
 
             interest:
                 interest,
 
             nextStep:
                 nextStep
-
         }
     );
 }
@@ -1465,7 +1375,7 @@ async function savePassedResult() {
 
 /*
  * ========================================
- * НЕ СОСТОЯЛСЯ
+ * ТЕСТ-ДРАЙВ НЕ СОСТОЯЛСЯ
  * ========================================
  */
 
@@ -1508,8 +1418,9 @@ async function saveFailedResult() {
                 reason,
 
             comment:
-                comment || '—'
-
+                comment
+                ||
+                '—'
         }
     );
 }
@@ -1517,7 +1428,7 @@ async function saveFailedResult() {
 
 /*
  * ========================================
- * ОБНОВЛЯЕМ ДЕЛО
+ * ОБНОВЛЕНИЕ КАРТОЧКИ ТЕСТ-ДРАЙВА
  * ========================================
  */
 
@@ -1527,20 +1438,44 @@ async function updateTestDrive(
 
     try {
 
+        /*
+         * ID configurable activity.
+         */
+
         const activityId =
             Number(
+
                 context.activityId
                 ||
                 context.activity_id
-            );
-
-
-        const leadId =
-            Number(
-                context.entityId
                 ||
-                context.leadId
+                context.ACTIVITY_ID
+                ||
+                context.associatedEntityId
+                ||
+                context.ASSOCIATED_ENTITY_ID
+                ||
+                0
+
             );
+
+
+        /*
+         * Теперь работаем ТОЛЬКО со сделкой.
+         */
+
+        const dealId =
+            getDealId(
+                context
+            );
+
+
+        if (!dealId) {
+
+            throw new Error(
+                'Не удалось определить ID сделки'
+            );
+        }
 
 
         if (!activityId) {
@@ -1556,414 +1491,125 @@ async function updateTestDrive(
         );
 
 
-        /*
-         * Основные блоки,
-         * которые были в карточке.
-         */
-
         const blocks = {
 
+            date:
+                withTitle(
+                    'Дата и время',
+                    context.date || '—',
+                    true
+                ),
 
-            date: {
+            car:
+                withTitle(
+                    'Автомобиль',
+                    context.car || '—',
+                    true,
+                    true
+                ),
 
-                type:
-                    'withTitle',
+            responsible:
+                withTitle(
+                    'Ответственный',
+                    context.responsibleName || '—',
+                    true
+                ),
 
-                properties: {
-
-                    title:
-                        'Дата и время',
-
-                    inline:
-                        true,
-
-                    block: {
-
-                        type:
-                            'text',
-
-                        properties: {
-
-                            value:
-                                context.date
-                                ||
-                                '—'
-                        }
-                    }
-                }
-            },
-
-
-            car: {
-
-                type:
-                    'withTitle',
-
-                properties: {
-
-                    title:
-                        'Автомобиль',
-
-                    inline:
-                        true,
-
-                    block: {
-
-                        type:
-                            'text',
-
-                        properties: {
-
-                            value:
-                                context.car
-                                ||
-                                '—',
-
-                            bold:
-                                true
-                        }
-                    }
-                }
-            },
-
-
-            responsible: {
-
-                type:
-                    'withTitle',
-
-                properties: {
-
-                    title:
-                        'Ответственный',
-
-                    inline:
-                        true,
-
-                    block: {
-
-                        type:
-                            'text',
-
-                    properties: {
-
-                            value:
-                                context.responsibleName
-                                ||
-                                '—'
-                        }
-                    }
-                }
-            },
-
-
-            result: {
-
-                type:
-                    'withTitle',
-
-                properties: {
-
-                    title:
-                        'Результат',
-
-                    inline:
-                        true,
-
-                    block: {
-
-                        type:
-                            'text',
-
-                        properties: {
-
-                            value:
-                                result.status,
-
-                            bold:
-                                true
-                        }
-                    }
-                }
-            }
-
+            result:
+                withTitle(
+                    'Результат',
+                    result.status,
+                    true,
+                    true
+                )
         };
 
 
-        /*
-         * =================================
-         * ЕСЛИ ПРОЙДЕН
-         * =================================
-         */
-
         if (
-            result.status
-            ===
+            result.status ===
             'Тест-драйв пройден'
         ) {
 
-
-            blocks.rating = {
-
-                type:
-                    'withTitle',
-
-                properties: {
-
-                    title:
-                        'Оценка',
-
-                    inline:
-                        true,
-
-                    block: {
-
-                        type:
-                            'text',
-
-                        properties: {
-
-                            value:
-                                result.rating,
-
-                            bold:
-                                true
-                        }
-                    }
-                }
-            };
+            blocks.rating =
+                withTitle(
+                    'Оценка',
+                    result.rating,
+                    true,
+                    true
+                );
 
 
-            blocks.interest = {
-
-                type:
-                    'withTitle',
-
-                properties: {
-
-                    title:
-                        'Интерес к покупке',
-
-                    inline:
-                        true,
-
-                    block: {
-
-                        type:
-                            'text',
-
-                        properties: {
-
-                            value:
-                                result.interest,
-
-                            bold:
-                                true
-                        }
-                    }
-                }
-            };
+            blocks.interest =
+                withTitle(
+                    'Интерес к покупке',
+                    result.interest,
+                    true,
+                    true
+                );
 
 
-            blocks.impression = {
-
-                type:
-                    'withTitle',
-
-                properties: {
-
-                    title:
-                        'Общие впечатления',
-
-                    inline:
-                        false,
-
-                    block: {
-
-                        type:
-                            'text',
-                            
-
-                        properties: {
-
-                            value:
-                                result.impression,
-                                multiline:
-                                          true
-                        }
-                    }
-                }
-            };
+            blocks.impression =
+                withTitle(
+                    'Общие впечатления',
+                    result.impression,
+                    false,
+                    false,
+                    true
+                );
 
 
-            blocks.liked = {
-
-                type:
-                    'withTitle',
-
-                properties: {
-
-                    title:
-                        'Что понравилось',
-
-                    inline:
-                        false,
-
-                    block: {
-
-                        type:
-                            'text',
-
-                        properties: {
-
-                            value:
-                                result.liked,
-                                  multiline:
-                                            true
-                        }
-                    }
-                }
-            };
+            blocks.liked =
+                withTitle(
+                    'Что понравилось',
+                    result.liked,
+                    false,
+                    false,
+                    true
+                );
 
 
-            blocks.concerns = {
-
-                type:
-                    'withTitle',
-
-                properties: {
-
-                    title:
-                        'Сомнения / минусы',
-
-                    inline:
-                        false,
-
-                    block: {
-
-                        type:
-                            'text',
-
-                        properties: {
-
-                            value:
-                                result.concerns,
-                               multiline:
-                                        true 
-                        }
-                    }
-                }
-            };
+            blocks.concerns =
+                withTitle(
+                    'Сомнения / минусы',
+                    result.concerns,
+                    false,
+                    false,
+                    true
+                );
 
 
-            blocks.nextStep = {
+            blocks.nextStep =
+                withTitle(
+                    'Следующий шаг',
+                    result.nextStep,
+                    true,
+                    true
+                );
 
-                type:
-                    'withTitle',
+        } else {
 
-                properties: {
+            blocks.reason =
+                withTitle(
+                    'Причина',
+                    result.reason,
+                    true,
+                    true
+                );
 
-                    title:
-                        'Следующий шаг',
 
-                    inline:
-                        true,
-
-                    block: {
-
-                        type:
-                            'text',
-
-                        properties: {
-
-                            value:
-                                result.nextStep,
-
-                            bold:
-                                true
-                        }
-                    }
-                }
-            };
-
+            blocks.comment =
+                withTitle(
+                    'Комментарий',
+                    result.comment,
+                    false,
+                    false,
+                    true
+                );
         }
 
 
         /*
-         * =================================
-         * ЕСЛИ НЕ СОСТОЯЛСЯ
-         * =================================
-         */
-
-        else {
-
-
-            blocks.reason = {
-
-                type:
-                    'withTitle',
-
-                properties: {
-
-                    title:
-                        'Причина',
-
-                    inline:
-                        true,
-
-                    block: {
-
-                        type:
-                            'text',
-
-                        properties: {
-
-                            value:
-                                result.reason,
-
-                            bold:
-                                true
-                        }
-                    }
-                }
-            };
-
-
-            blocks.comment = {
-
-                type:
-                    'withTitle',
-
-                properties: {
-
-                    title:
-                        'Комментарий',
-
-                    inline:
-                        false,
-
-                    block: {
-
-                        type:
-                            'text',
-
-                        properties: {
-
-                            value:
-                                result.comment,
-                                multiline:
-                                        true
-                        }
-                    }
-                }
-            };
-        }
-
-
-        /*
-         * =================================
-         * ОБНОВЛЯЕМ КАРТОЧКУ
-         * =================================
+         * Обновляем саму карточку тест-драйва.
          */
 
         await callBitrix(
@@ -1975,13 +1621,11 @@ async function updateTestDrive(
                 id:
                     activityId,
 
-
                 fields: {
 
                     completed:
                         true
                 },
-
 
                 layout: {
 
@@ -1991,31 +1635,28 @@ async function updateTestDrive(
                             'testdrive-car-icon-v1'
                     },
 
-
                     header: {
 
                         title:
-                            (
-                                result.status
-                                ===
-                                'Тест-драйв пройден'
-                            )
+                            result.status ===
+                            'Тест-драйв пройден'
                             ?
-                            'Тест-драйв пройден — ' +
+                            'Тест-драйв пройден — '
+                            +
                             (
                                 context.car
                                 ||
                                 ''
                             )
                             :
-                            'Тест-драйв не состоялся — ' +
+                            'Тест-драйв не состоялся — '
+                            +
                             (
                                 context.car
                                 ||
                                 ''
                             )
                     },
-
 
                     body: {
 
@@ -2028,69 +1669,75 @@ async function updateTestDrive(
                         blocks:
                             blocks
                     }
-
-
-                    /*
-                     * FOOTER БОЛЬШЕ НЕТ.
-                     *
-                     * Значит кнопки
-                     * "Пройден / Не состоялся"
-                     * исчезнут.
-                     */
                 }
             }
         );
 
 
-     if (
-    result.status
-    ===
-    'Не состоялся'
-) {
+        /*
+         * НЕ СОСТОЯЛСЯ
+         * → сделка в "Брошенный".
+         */
 
-    await moveLeadToStageByName(
-        leadId,
-        'Брошенный'
-    );
+        if (
+            result.status ===
+            'Не состоялся'
+        ) {
 
-
-    showSuccess(
-        'Тест-драйв не состоялся. ' +
-        'Лид переведён в «Брошенный».'
-    );
-
-} else {
-
-    await startPassedTestDriveWatch(
-        leadId,
-        activityId
-    );
+            await moveDealToStageByName(
+                dealId,
+                'Брошенный'
+            );
 
 
-    showSuccess(
-        'Тест-драйв пройден. ' +
-        'Запущен контроль активности лида на 5 секунд.'
-    );
-}
+            showSuccess(
+                'Тест-драйв не состоялся. '
+                +
+                'Сделка переведена в «Брошенный».'
+            );
+
+        } else {
+
+            /*
+             * ПРОЙДЕН
+             * → запускаем 5-секундный тестовый контроль.
+             */
+
+            await startPassedTestDriveWatch(
+                dealId,
+                activityId
+            );
 
 
-setTimeout(
-    function() {
+            showSuccess(
+                'Тест-драйв пройден. '
+                +
+                'Запущен контроль активности сделки на 5 секунд.'
+            );
+        }
 
-        BX24.reloadWindow(
-            function() {
 
-                BX24.closeApplication();
-            }
+        setTimeout(
+            function () {
+
+                BX24.reloadWindow(
+                    function () {
+
+                        BX24.closeApplication();
+                    }
+                );
+
+            },
+            900
         );
 
-    },
-    900
-);
+    } catch (
+        error
+    ) {
 
-    } catch (error) {
-
-        console.error(error);
+        console.error(
+            error
+        );
 
 
         setButtonsDisabled(
@@ -2101,9 +1748,60 @@ setTimeout(
         showError(
             error.message
             ||
-            String(error)
+            String(
+                error
+            )
         );
     }
+}
+
+
+/*
+ * ========================================
+ * БЛОК ТАЙМЛАЙНА
+ * ========================================
+ */
+
+function withTitle(
+    title,
+    value,
+    inline,
+    bold = false,
+    multiline = false
+) {
+
+    return {
+
+        type:
+            'withTitle',
+
+        properties: {
+
+            title:
+                title,
+
+            inline:
+                inline,
+
+            block: {
+
+                type:
+                    'text',
+
+                properties: {
+
+                    value:
+                        value,
+
+                    bold:
+                        bold,
+
+                    multiline:
+                        multiline
+                }
+            }
+        }
+    };
 }
 
 
@@ -2122,7 +1820,9 @@ function setButtonsDisabled(
             '.submit'
         )
         .forEach(
-            function(button) {
+            function (
+                button
+            ) {
 
                 button.disabled =
                     disabled;
@@ -2203,7 +1903,6 @@ function escapeHtml(
 }
 
 </script>
-
 
 </body>
 </html>
