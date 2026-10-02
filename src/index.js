@@ -1,5 +1,14 @@
 const ORIGIN_URL = 'https://kamaz-scrypt.taile47694.ts.net:8443';
+const SALES_USER_IDS = new Set([
+  1306,
+  1013,
+  1249,
+  331,
+  335,
+]);
 
+const SALES_CALL_CATEGORY_NAME = 'РЛ';
+const SALES_CALL_STAGE_NAME = 'Новый';
 const CALL_RESULT_FIELD_TITLE = 'Результат звонка';
 const NO_PHONE_REASON_FIELD_TITLE = 'Почему не взяли контакт клиента?';
 
@@ -1731,6 +1740,455 @@ async function assetResponse(
   );
 }
 
+/*
+ * =========================================================
+ * ЗВОНКИ ОТДЕЛА ПРОДАЖ → ВОРОНКА РЛ
+ * =========================================================
+ */
+
+async function findDealCategoryIdByName(
+  domain,
+  accessToken,
+  categoryName
+) {
+  const response =
+    await restCall(
+      domain,
+      accessToken,
+      'crm.category.list',
+      {
+        entityTypeId: 2,
+      }
+    );
+
+  if (response.error) {
+    return 0;
+  }
+
+  const categories =
+    Array.isArray(
+      response.result?.categories
+    )
+      ? response.result.categories
+      : (
+          Array.isArray(response.result)
+            ? response.result
+            : []
+        );
+
+  const target =
+    categories.find(
+      item =>
+        normalizeText(
+          item.name
+          ||
+          item.NAME
+        )
+        ===
+        normalizeText(
+          categoryName
+        )
+    );
+
+  return Number(
+    target?.id
+    ||
+    target?.ID
+    ||
+    0
+  );
+}
+
+
+function getDealIdFromActivity(
+  activity
+) {
+  if (
+    Number(
+      activity.OWNER_TYPE_ID
+      ||
+      0
+    ) === 2
+  ) {
+    return Number(
+      activity.OWNER_ID
+      ||
+      0
+    );
+  }
+
+
+  const bindings =
+    Array.isArray(
+      activity.BINDINGS
+    )
+      ? activity.BINDINGS
+      : [];
+
+
+  const dealBinding =
+    bindings.find(
+      item =>
+        Number(
+          item.OWNER_TYPE_ID
+          ||
+          item.ownerTypeId
+          ||
+          0
+        ) === 2
+    );
+
+
+  return Number(
+    dealBinding?.OWNER_ID
+    ||
+    dealBinding?.ownerId
+    ||
+    0
+  );
+}
+
+
+async function salesCallRouter(
+  request
+) {
+  let form;
+
+  try {
+    form =
+      await request.formData();
+  } catch {
+    return json(
+      {
+        ok: false,
+        error: 'bad_form_data',
+      },
+      400
+    );
+  }
+
+
+  const event =
+    String(
+      form.get('event')
+      ||
+      ''
+    )
+      .toLowerCase();
+
+
+  if (
+    event !==
+    'oncrmactivityadd'
+  ) {
+    return json({
+      ok: true,
+      ignored: 'wrong_event',
+    });
+  }
+
+
+  const activityId =
+    Number(
+      form.get(
+        'data[FIELDS][ID]'
+      )
+      ||
+      form.get(
+        'data[fields][ID]'
+      )
+      ||
+      0
+    );
+
+
+  const domain =
+    String(
+      form.get(
+        'auth[domain]'
+      )
+      ||
+      ''
+    );
+
+
+  const accessToken =
+    String(
+      form.get(
+        'auth[access_token]'
+      )
+      ||
+      ''
+    );
+
+
+  if (
+    !activityId
+    ||
+    !domain
+    ||
+    !accessToken
+  ) {
+    return json({
+      ok: false,
+      error: 'missing_event_data',
+    });
+  }
+
+
+  /*
+   * Несколько попыток:
+   * Битрикс иногда не сразу
+   * записывает все связи звонка.
+   */
+
+  let activity = null;
+
+  for (
+    let attempt = 0;
+    attempt < 3;
+    attempt++
+  ) {
+
+    if (attempt > 0) {
+      await sleep(
+        700
+      );
+    }
+
+
+    const response =
+      await restCall(
+        domain,
+        accessToken,
+        'crm.activity.get',
+        {
+          id: activityId,
+        }
+      );
+
+
+    if (
+      !response.error
+      &&
+      response.result
+    ) {
+      activity =
+        response.result;
+    }
+
+
+    if (
+      activity
+      &&
+      getDealIdFromActivity(
+        activity
+      )
+    ) {
+      break;
+    }
+  }
+
+
+  if (!activity) {
+    return json({
+      ok: false,
+      error: 'activity_not_found',
+    });
+  }
+
+
+  /*
+   * TYPE_ID = 2 — звонок.
+   */
+
+  if (
+    Number(
+      activity.TYPE_ID
+      ||
+      0
+    ) !== 2
+  ) {
+    return json({
+      ok: true,
+      ignored: 'not_call',
+    });
+  }
+
+
+  const responsibleId =
+    Number(
+      activity.RESPONSIBLE_ID
+      ||
+      0
+    );
+
+
+  /*
+   * Звонок сделал не сотрудник
+   * отдела продаж.
+   */
+
+  if (
+    !SALES_USER_IDS.has(
+      responsibleId
+    )
+  ) {
+    return json({
+      ok: true,
+      ignored: 'not_sales_user',
+      responsibleId,
+    });
+  }
+
+
+  const dealId =
+    getDealIdFromActivity(
+      activity
+    );
+
+
+  if (!dealId) {
+    return json({
+      ok: true,
+      ignored: 'deal_not_found',
+      responsibleId,
+    });
+  }
+
+
+  const categoryId =
+    await findDealCategoryIdByName(
+      domain,
+      accessToken,
+      SALES_CALL_CATEGORY_NAME
+    );
+
+
+  if (!categoryId) {
+    return json({
+      ok: false,
+      error: 'rl_category_not_found',
+    });
+  }
+
+
+  const stageId =
+    await findStageIdByName(
+      domain,
+      accessToken,
+      'DEAL',
+      SALES_CALL_STAGE_NAME,
+      categoryId
+    );
+
+
+  if (!stageId) {
+    return json({
+      ok: false,
+      error: 'rl_new_stage_not_found',
+      categoryId,
+    });
+  }
+
+
+  /*
+   * Проверяем текущую сделку.
+   */
+
+  const dealResponse =
+    await getCrmEntity(
+      domain,
+      accessToken,
+      'DEAL',
+      dealId
+    );
+
+
+  if (!dealResponse.ok) {
+    return json({
+      ok: false,
+      error: 'deal_get_failed',
+      dealId,
+    });
+  }
+
+
+  const currentCategoryId =
+    Number(
+      dealResponse.entity?.CATEGORY_ID
+      ||
+      0
+    );
+
+
+  /*
+   * Уже находится в РЛ —
+   * ничего не делаем.
+   */
+
+  if (
+    currentCategoryId ===
+    categoryId
+  ) {
+    return json({
+      ok: true,
+      ignored: 'already_in_rl',
+      dealId,
+      responsibleId,
+    });
+  }
+
+
+  /*
+   * Перенос между воронками
+   * делается через crm.item.update.
+   */
+
+  const updateResponse =
+    await restCall(
+      domain,
+      accessToken,
+      'crm.item.update',
+      {
+        entityTypeId: 2,
+
+        id:
+          dealId,
+
+        fields: {
+
+          categoryId:
+            categoryId,
+
+          stageId:
+            stageId,
+        },
+      }
+    );
+
+
+  if (updateResponse.error) {
+    return json({
+      ok: false,
+      error: 'deal_move_failed',
+      detail:
+        updateResponse.error_description
+        ||
+        updateResponse.error,
+    });
+  }
+
+
+  return json({
+    ok: true,
+    moved: true,
+    dealId,
+    responsibleId,
+    categoryId,
+    stageId,
+  });
+} 
 
 /*
  * =========================================================
@@ -1867,7 +2325,39 @@ export default {
       );
     }
 
+/*
+ * ЗВОНКИ ОТДЕЛА ПРОДАЖ
+ */
 
+if (
+  path === '/sales-call-router.php'
+) {
+
+  if (
+    request.method !== 'POST'
+  ) {
+
+    return json({
+      ok: true,
+      endpoint:
+        'sales-call-router',
+
+      salesUsers: [
+        1306,
+        1013,
+        1249,
+        331,
+        335,
+      ],
+    });
+  }
+
+
+  return salesCallRouter(
+    request
+  );
+}
+    
     /*
      * КОНТРОЛЬ ПОСЛЕ ТЕСТ-ДРАЙВА
      */
