@@ -1,4 +1,4 @@
-const ORIGIN_URL = 'https://kamaz-scrypt.taile47694.ts.net:8443';
+const ORIGIN_URL = 'https://kamaz-scrypt.taile47694.ts.net/crm';
 const SALES_USER_IDS = new Set([
   1306,
   1013,
