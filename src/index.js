@@ -1,4 +1,4 @@
-const ORIGIN_URL = 'https://kamaz-scrypt.taile47694.ts.net';
+const ORIGIN_URL = 'https://kamaz-scrypt.taile47694.ts.net:8443';
 
 const CALL_RESULT_FIELD_TITLE = 'Результат звонка';
 const NO_PHONE_REASON_FIELD_TITLE = 'Почему не взяли контакт клиента?';
